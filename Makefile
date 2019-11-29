@@ -30,14 +30,11 @@ ax_sdl_test: ${c_sdl_test_srcs} ${c_objs}
 run_sdl_test: ax_sdl_test
 	./ax_sdl_test
 
-_build/tests.inc: _build ${c_test_srcs}
-	${py3} scripts/find_tests.py test $@
-
 ax_test: ${c_test_srcs} ${c_test_gen} ${c_objs}
 	${cc} ${c_test_flags} ${c_objs} ${c_test_srcs} -o $@
 
 run_test: ax_test
-	./ax_test
+	./ax_test ${test_args}
 
 TAGS: ${tags_srcs}
 	${etags} ${tags_srcs}
@@ -45,7 +42,12 @@ TAGS: ${tags_srcs}
 _build:
 	mkdir _build
 
-_build/%.c.o: src/%.c _build
+_build/%.c.o: src/%.c
+	@mkdir -p _build
 	${cc} ${c_flags} -c -o $@ $<
+
+_build/tests.inc: ${c_test_srcs}
+	@mkdir -p _build
+	${py3} scripts/find_tests.py test $@
 
 .PHONY: all clean run_test run_sdl_test
