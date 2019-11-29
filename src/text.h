@@ -2,12 +2,18 @@
 #include "ax.h"
 
 
+typedef ax_length (*ax_text_measure_fn)(char*, void*);
+
 struct ax_text_iter {
     const char* text;
     char* word;
     char* line;
     size_t line_len;
     bool line_need_reset;
+
+    ax_text_measure_fn mf;
+    void* mf_userdata;
+    ax_length max_width;
 };
 
 enum ax_text_elem {

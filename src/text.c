@@ -5,6 +5,13 @@
 #include "utils.h"
 
 
+static ax_length ax_dummy_measure_fn(char* str, void* ud)
+{
+    (void) ud;
+    (void) str;
+    return 0.0;
+}
+
 void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
 {
     ti->text = text;
@@ -13,6 +20,10 @@ void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
     ASSERT(ti->line != NULL, "malloc ax_text_iter.line");
     ti->line_len = 0;
     ti->line_need_reset = false;
+
+    ti->mf = ax_dummy_measure_fn;
+    ti->mf_userdata = NULL;
+    ti->max_width = 0.0;
 }
 
 void ax__text_iter_free(struct ax_text_iter* ti)
@@ -59,6 +70,7 @@ enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti)
     } else if (bow >= eow) {
         return AX_TEXT_END;
     } else {
+
         size_t w_len = eow - bow;
         free(ti->word);
         ti->word = malloc(w_len + 1);
@@ -66,11 +78,21 @@ enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti)
         memcpy(ti->word, bow, w_len);
         ti->word[w_len] = '\0';
 
+        size_t prev_line_len = ti->line_len;
         if (ti->line_len > 0) {
             ti->line[ti->line_len++] = ' ';
         }
         strcpy(&ti->line[ti->line_len], ti->word);
         ti->line_len += w_len;
+
+        ax_length width = ti->mf(ti->line, ti->mf_userdata);
+        if (prev_line_len > 0 &&  // overflowing max_width is OK for first word
+            width > ti->max_width)
+        {
+            ti->line[ti->line_len = prev_line_len] = '\0';
+            ti->line_need_reset = true;
+            return AX_TEXT_EOL;
+        }
 
         ti->text = eow;
         return AX_TEXT_WORD;

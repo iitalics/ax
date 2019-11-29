@@ -59,3 +59,40 @@ TEST(text_linebreak_chars)
     CHECK_IEQ(e, AX_TEXT_END); CHECK_STREQ(ti.line, "Bang.");
     ax__text_iter_free(&ti);
 }
+
+
+static ax_length mono_measure_fn(char* str, void* ud)
+{
+    ax_length font_size = *(ax_length*) ud;
+    return strlen(str) * font_size;
+}
+
+TEST(text_linebreak_width)
+{
+    struct ax_text_iter ti;
+    enum ax_text_elem e;
+    ax__text_iter_init(&ti, "Foo bar baz bang. Superlongword.");
+    ax_length font_size = 10;
+    ti.mf = mono_measure_fn;
+    ti.mf_userdata = &font_size;
+    ti.max_width = 80;
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "Foo");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "bar");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_EOL); CHECK_STREQ(ti.line, "Foo bar");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "baz");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_EOL); CHECK_STREQ(ti.line, "baz");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "bang.");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_EOL); CHECK_STREQ(ti.line, "bang.");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "Superlongword.");
+    e = ax__text_iter_next(&ti);
+    CHECK_IEQ(e, AX_TEXT_END); CHECK_STREQ(ti.line, "Superlongword.");
+    ax__text_iter_free(&ti);
+}
