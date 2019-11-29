@@ -5,7 +5,7 @@
 #include "utils.h"
 
 
-static ax_length ax_dummy_measure_fn(char* str, void* ud)
+static ax_length ax_dummy_measure_fn(const char* str, void* ud)
 {
     (void) ud;
     (void) str;

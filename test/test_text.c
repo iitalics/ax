@@ -61,11 +61,22 @@ TEST(text_linebreak_chars)
 }
 
 
-static ax_length mono_measure_fn(char* str, void* ud)
+static ax_length mono_measure_fn(const char* str, void* ud)
 {
     ax_length font_size = *(ax_length*) ud;
     return strlen(str) * font_size;
 }
+
+void ax__measure_text(
+    void* ud,
+    const char* text,
+    struct ax_text_metrics* tm)
+{
+    ax_length font_size = *(ax_length*) ud;
+    tm->line_spacing = tm->text_height = font_size;
+    tm->width = mono_measure_fn(text, ud);
+}
+
 
 TEST(text_linebreak_width)
 {

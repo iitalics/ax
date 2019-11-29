@@ -3,6 +3,7 @@
 #include <SDL2/SDL_ttf.h>
 #include "../src/ax.h"
 #include "../src/utils.h"
+#include "../src/text.h"
 #include "desc_helpers.h"
 
 /*
@@ -23,6 +24,26 @@ static SDL_Color sdl_color(ax_color c)
     uint8_t rgb[3];
     ax_color_rgb(c, rgb);
     return (SDL_Color) { .a = 0xff, .r = rgb[0], .g = rgb[1], .b = rgb[2] };
+}
+
+
+void ax__measure_text(
+    void* font_voidptr,
+    const char* text,
+    struct ax_text_metrics* tm)
+{
+    TTF_Font* font = font_voidptr;
+
+    int w_int;
+    if (text == NULL) {
+        w_int = 0;
+    } else {
+        int rv = TTF_SizeUTF8(font, text, &w_int, NULL);
+        ASSERT(rv == 0, "TTF_SizeText failed");
+    }
+    tm->text_height = TTF_FontHeight(font);
+    tm->line_spacing = TTF_FontLineSkip(font);
+    tm->width = w_int;
 }
 
 
@@ -77,9 +98,10 @@ int main(int argc, char** argv)
 
     const struct ax_desc root_desc =
         CONT(
-            AX_JUSTIFY_CENTER, AX_JUSTIFY_CENTER,
+            AX_JUSTIFY_CENTER,
+            AX_JUSTIFY_CENTER,
             FLEX_CHILD(0, 1, 0,
-                       TEXT(0x000000, "Hello, world", a_font)));
+                       TEXT(0x000000, "Hello, to the world", a_font)));
 
     ax = ax_new_state();
     ax_set_dimensions(ax, AX_DIM(width, height));

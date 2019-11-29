@@ -3,6 +3,7 @@
 #include "ax.h"
 #include "utils.h"
 #include "node.h"
+#include "text.h"
 
 
 #define MAIN(_d) (_d).w
@@ -97,10 +98,13 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
         hypoth = node->r.size;
         break;
 
-    case AX_NODE_TEXT:
-        // TODO: fill in stub impl
-        hypoth = AX_DIM(0.0, 0.0);
+    case AX_NODE_TEXT: {
+        // TODO: break into lines based on node->avail.w
+        struct ax_text_metrics tm;
+        ax__measure_text(node->t.desc.font, node->t.desc.text, &tm);
+        hypoth = AX_DIM(tm.width, tm.text_height);
         break;
+    }
 
     default: NO_SUCH_NODE_TAG();
     }
