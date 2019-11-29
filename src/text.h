@@ -5,11 +5,15 @@
 struct ax_text_iter {
     const char* text;
     char* word;
+    char* line;
+    size_t line_len;
+    bool line_need_reset;
 };
 
 enum ax_text_elem {
     AX_TEXT_END = 0,
     AX_TEXT_WORD,
+    AX_TEXT_EOL,
     AX_TEXT__MAX
 };
 
