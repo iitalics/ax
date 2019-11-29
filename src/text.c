@@ -12,6 +12,14 @@ static ax_length ax_dummy_measure_fn(const char* str, void* ud)
     return 0.0;
 }
 
+static ax_length ax_font_measure_fn(const char* str, void* font)
+{
+    struct ax_text_metrics tm;
+    ax__measure_text(font, str, &tm);
+    return tm.width;
+}
+
+
 void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
 {
     ti->text = text;
@@ -30,6 +38,12 @@ void ax__text_iter_free(struct ax_text_iter* ti)
 {
     free(ti->line);
     free(ti->word);
+}
+
+void ax__text_iter_set_font(struct ax_text_iter* ti, void* font)
+{
+    ti->mf = ax_font_measure_fn;
+    ti->mf_userdata = font;
 }
 
 

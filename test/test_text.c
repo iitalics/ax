@@ -61,12 +61,6 @@ TEST(text_linebreak_chars)
 }
 
 
-static ax_length mono_measure_fn(const char* str, void* ud)
-{
-    ax_length font_size = *(ax_length*) ud;
-    return strlen(str) * font_size;
-}
-
 void ax__measure_text(
     void* ud,
     const char* text,
@@ -74,7 +68,7 @@ void ax__measure_text(
 {
     ax_length font_size = *(ax_length*) ud;
     tm->line_spacing = tm->text_height = font_size;
-    tm->width = mono_measure_fn(text, ud);
+    tm->width = strlen(text) * font_size;
 }
 
 
@@ -84,8 +78,7 @@ TEST(text_linebreak_width)
     enum ax_text_elem e;
     ax__text_iter_init(&ti, "Foo bar baz bang. Superlongword.");
     ax_length font_size = 10;
-    ti.mf = mono_measure_fn;
-    ti.mf_userdata = &font_size;
+    ax__text_iter_set_font(&ti, &font_size);
     ti.max_width = 80;
     e = ax__text_iter_next(&ti);
     CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "Foo");

@@ -25,6 +25,7 @@ enum ax_text_elem {
 
 extern void ax__text_iter_init(struct ax_text_iter* ti, const char* text);
 extern void ax__text_iter_free(struct ax_text_iter* ti);
+extern void ax__text_iter_set_font(struct ax_text_iter* ti, void* font);
 
 extern enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti);
 
