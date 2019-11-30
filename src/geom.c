@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "ax.h"
 #include "utils.h"
 #include "node.h"
@@ -279,9 +280,47 @@ static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
     case AX_NODE_RECTANGLE:
         break;
 
-    case AX_NODE_TEXT:
-        // TODO: fill in stub impl
+    case AX_NODE_TEXT: {
+        struct ax_pos coord = node->coord;
+        struct ax_node_t_line* line, *prev_line = NULL;
+        ax__free_node_t_line(node->t.lines);
+        node->t.lines = NULL;
+        struct ax_text_metrics tm;
+        ax__measure_text(node->t.desc.font, "", &tm);
+        struct ax_text_iter ti;
+        enum ax_text_elem te;
+        ax__text_iter_init(&ti, node->t.desc.text);
+        ax__text_iter_set_font(&ti, node->t.desc.font);
+        ti.max_width = node->target.w;
+        do {
+            te = ax__text_iter_next(&ti);
+            switch (te) {
+            case AX_TEXT_WORD:
+                break;
+
+            case AX_TEXT_EOL:
+            case AX_TEXT_END: {
+                line = malloc(sizeof(struct ax_node_t_line) +
+                              strlen(ti.line) + 1);
+                ASSERT(line != NULL, "mallox ax_node_t_line");
+                line->next = NULL;
+                line->coord = coord;
+                strcpy(line->str, ti.line);
+                coord.y += tm.line_spacing;
+                if (prev_line == NULL) {
+                    node->t.lines = line;
+                } else {
+                    prev_line->next = line;
+                }
+                prev_line = line;
+                break;
+            }
+
+            default: NO_SUCH_TAG("ax_text_elem");
+            }
+        } while (te != AX_TEXT_END);
         break;
+    }
 
     default: NO_SUCH_NODE_TAG();
     }

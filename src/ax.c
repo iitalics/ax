@@ -63,6 +63,7 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
         node->t.desc.text = text;
+        node->t.lines = NULL;
         break;
 
     default: NO_SUCH_NODE_TAG();
@@ -79,10 +80,20 @@ static void ax_free_node_data(struct ax_node* node)
         }
         break;
     case AX_NODE_TEXT:
+        ax__free_node_t_line(node->t.lines);
         free((void*) node->t.desc.text);
         break;
     default:
         break;
+    }
+}
+
+void ax__free_node_t_line(struct ax_node_t_line* line)
+{
+    struct ax_node_t_line* next;
+    for (; line != NULL; line = next) {
+        next = line->next;
+        free(line);
     }
 }
 

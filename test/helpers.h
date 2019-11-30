@@ -39,8 +39,13 @@ extern void _ax_test_fail();
           (_lhs), (_rhs))
 
 #define CHECK_STREQ(_lhs, _rhs)                 \
-    CHECK(strcmp(_lhs, _rhs) == 0,                   \
+    CHECK(strcmp(_lhs, _rhs) == 0,              \
           "\"%s\" does not equal \"%s\"",       \
+          (_lhs), (_rhs))
+
+#define CHECK_PEQ(_lhs, _rhs)                   \
+    CHECK((void*) (_lhs) == (void*) (_rhs),     \
+          "%p does not equal %p",               \
           (_lhs), (_rhs))
 
 static inline int _ax_float_eq_threshold(float t, float x, float y)

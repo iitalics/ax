@@ -17,6 +17,13 @@ struct ax_node_c {
 
 struct ax_node_t {
     struct ax_desc_t desc;
+    struct ax_node_t_line* lines;
+};
+
+struct ax_node_t_line {
+    struct ax_node_t_line* next;
+    struct ax_pos coord;
+    char str[0];
 };
 
 struct ax_node {
@@ -66,6 +73,8 @@ struct ax_node* ax_root(struct ax_tree* tree)
 {
     return ax_node_by_id(tree, 0);
 }
+
+void ax__free_node_t_line(struct ax_node_t_line* line);
 
 
 #define NO_SUCH_NODE_TAG() NO_SUCH_TAG("ax_node_type")

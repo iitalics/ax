@@ -45,15 +45,19 @@ static void ax_redraw_(struct ax_node* node, struct ax_drawbuf* db)
         break;
     }
 
-    case AX_NODE_TEXT: {
-        struct ax_draw* d = ax_drawbuf_ins(db);
-        d->ty = AX_DRAW_TEXT;
-        d->t.color = node->t.desc.color;
-        d->t.font = node->t.desc.font;
-        d->t.text = node->t.desc.text;
-        d->t.pos = node->coord;
+    case AX_NODE_TEXT:
+        for (struct ax_node_t_line* line = node->t.lines;
+             line != NULL;
+             line = line->next)
+        {
+            struct ax_draw* d = ax_drawbuf_ins(db);
+            d->ty = AX_DRAW_TEXT;
+            d->t.color = node->t.desc.color;
+            d->t.font = node->t.desc.font;
+            d->t.text = line->str;
+            d->t.pos = line->coord;
+        }
         break;
-    }
 
     default: NO_SUCH_NODE_TAG();
     }

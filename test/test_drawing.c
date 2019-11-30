@@ -98,10 +98,9 @@ TEST(draw_3r)
 }
 
 
-TEST(draw_text)
+TEST(draw_text_1l)
 {
-    int font_size = 5;
-
+    ax_length font_size = 10;
     struct ax_state* s = ax_new_state();
     ax_set_dimensions(s, AX_DIM(200.0, 200.0));
     ax_set_root(
@@ -116,5 +115,35 @@ TEST(draw_text)
     CHECK_IEQ_HEX(D(0).t.color, 0x111111);
     CHECK_POSEQ(D(0).t.pos, AX_POS(0.0, 0.0));
     CHECK_STREQ(D(0).t.text, "Hello, world");
-    CHECK_IEQ(*(int*) D(0).t.font, font_size);
+    CHECK_PEQ(D(0).t.font, &font_size);
+
+    ax_destroy_state(s);
+}
+
+TEST(draw_text_2l)
+{
+    ax_length font_size = 10;
+    struct ax_state* s = ax_new_state();
+    ax_set_dimensions(s, AX_DIM(100.0, 100.0));
+    ax_set_root(
+        s,
+        &(struct ax_desc)
+        TEXT(0x111111, "Hello, world", &font_size));
+
+    const struct ax_drawbuf* d = ax_draw(s);
+    CHECK_SZEQ(d->len, (size_t) 2);
+
+    CHECK_IEQ(D(0).ty, AX_DRAW_TEXT);
+    CHECK_IEQ_HEX(D(0).t.color, 0x111111);
+    CHECK_POSEQ(D(0).t.pos, AX_POS(0.0, 0.0));
+    CHECK_STREQ(D(0).t.text, "Hello,");
+    CHECK_PEQ(D(0).t.font, &font_size);
+
+    CHECK_IEQ(D(1).ty, AX_DRAW_TEXT);
+    CHECK_IEQ_HEX(D(1).t.color, 0x111111);
+    CHECK_POSEQ(D(1).t.pos, AX_POS(0.0, 10.0));
+    CHECK_STREQ(D(1).t.text, "world");
+    CHECK_PEQ(D(1).t.font, &font_size);
+
+    ax_destroy_state(s);
 }
