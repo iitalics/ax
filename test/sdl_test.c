@@ -6,8 +6,7 @@
 #include "../src/text.h"
 #include "desc_helpers.h"
 
-/*
-static ax_color lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
+ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
 {
     uint8_t rgb0[3], rgb1[3], rgbL[3];
     ax_color_rgb(c0, rgb0);
@@ -17,9 +16,8 @@ static ax_color lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
     }
     return ax_rgb_color(rgbL);
 }
-*/
 
-static SDL_Color sdl_color(ax_color c)
+SDL_Color ax__sdl_color(ax_color c)
 {
     uint8_t rgb[3];
     ax_color_rgb(c, rgb);
@@ -78,24 +76,24 @@ int main(int argc, char** argv)
         goto ttf_error;
     }
 
-    /*
-    struct ax_flex_child_desc children[40];
+    struct ax_flex_child_desc children[5];
     for (size_t i = 0; i < LENGTH(children); i++) {
-        int fill = lerp_colors(0xffcc11, // #fc1
-                               0x8822ff, // #82f
-                               i, LENGTH(children));
+        int fill = ax__lerp_colors(0xffcc11, // #fc1
+                                   0x8822ff, // #82f
+                                   i, LENGTH(children));
         children[i] = (struct ax_flex_child_desc)
             FLEX_CHILD(
-                0, 1, AX_JUSTIFY_CENTER,
-                RECT(fill, 5 + i * 5, 5 + i * 2));
+                0, (i == 0) ? 0 : 1, AX_JUSTIFY_CENTER,
+                RECT(fill, 100 + i * 5, 100 + i * 30));
     }
 
-    const struct ax_desc root_desc =
+    struct ax_desc root_desc =
         ACONT(AX_JUSTIFY_EVENLY,
               AX_JUSTIFY_BETWEEN,
               children);
-    */
+    root_desc.c.single_line = true;
 
+    /*
     struct ax_desc root_desc =
         CONT(
             AX_JUSTIFY_BETWEEN,
@@ -105,6 +103,7 @@ int main(int argc, char** argv)
             FLEX_CHILD(0, 1, 0,
                        TEXT(0x444444, "... goodbye, world", a_font)));
     root_desc.c.single_line = true;
+    */
 
     ax = ax_new_state();
     ax_set_dimensions(ax, AX_DIM(width, height));
@@ -143,7 +142,7 @@ int main(int argc, char** argv)
             switch (d.ty) {
 
             case AX_DRAW_RECT: {
-                SDL_Color color = sdl_color(d.r.fill);
+                SDL_Color color = ax__sdl_color(d.r.fill);
                 SDL_SetRenderDrawColor(rn, color.r, color.g, color.b, color.a);
                 SDL_Rect r;
                 r.x = d.r.bounds.o.x;
@@ -155,7 +154,7 @@ int main(int argc, char** argv)
             }
 
             case AX_DRAW_TEXT: {
-                SDL_Color fg = sdl_color(d.t.color);
+                SDL_Color fg = ax__sdl_color(d.t.color);
                 SDL_Surface* sf = TTF_RenderUTF8_Blended(d.t.font, d.t.text, fg);
                 if (sf == NULL) {
                     goto ttf_error;
