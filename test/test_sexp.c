@@ -104,8 +104,24 @@ TEST(sexp_err_extra_rparen)
     ax__parser_feedc(&p, '(');
     ax__parser_feedc(&p, ' ');
     ax__parser_feedc(&p, ')');
-    CHECK_IEQ(ax__parser_feedc(&p, ')'), AX_PARSE_ERROR);
+    enum ax_parse r = ax__parser_feedc(&p, ')');
+    CHECK_IEQ(r, AX_PARSE_ERROR);
     CHECK_IEQ(p.err, AX_PARSE_ERROR_EXTRA_RPAREN);
     CHECK_STREQ(p.str, "unexpected `)'");
+    ax__parser_free(&p);
+}
+
+TEST(sexp_err_unmatch_lparen)
+{
+    struct ax_parser p;
+    ax__parser_init(&p);
+    ax__parser_feedc(&p, '(');
+    ax__parser_feedc(&p, ' ');
+    ax__parser_feedc(&p, '(');
+    ax__parser_feedc(&p, ')');
+    enum ax_parse r = ax__parser_eof(&p);
+    CHECK_IEQ(r, AX_PARSE_ERROR);
+    CHECK_IEQ(p.err, AX_PARSE_ERROR_UNMATCH_LPAREN);
+    CHECK_STREQ(p.str, "unmatched `('");
     ax__parser_free(&p);
 }

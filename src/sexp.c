@@ -36,7 +36,6 @@ enum char_class ax__char_class(char c)
     case '-': case '_': return C_OTHERSYM;
     case '#': return C_HASH;
     case '"': return C_QUOTE;
-    case '\0': return C_EOF;
     default:
         if (c >= '0' && c <= '9') {
             return C_DECIMAL;
@@ -66,33 +65,51 @@ static enum ax_parse ax_extra_rparen_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
+static enum ax_parse ax_unmatch_lparen_err(struct ax_parser* p)
+{
+    p->len = sprintf(p->str, "unmatched `('");
+    p->err = AX_PARSE_ERROR_UNMATCH_LPAREN;
+    return AX_PARSE_ERROR;
+}
+
 enum ax_parse ax__parser_feed(struct ax_parser* p,
                               char const* chars,
                               char** out_chars)
 {
     enum ax_parse rv;
-    for (;; chars++) {
+    enum char_class cc;
+    for (; *chars != '\0'; chars++) {
+        cc = ax__char_class(*chars);
         switch (p->state) {
 
-        case S_WHITESPACE: {
-            enum char_class cc = ax__char_class(*chars);
-            if (cc == C_LPAREN) {
+        case S_WHITESPACE:
+            switch (cc) {
+            case C_LPAREN:
                 p->paren_depth++;
                 rv = AX_PARSE_LPAREN;
-            } else if (cc == C_RPAREN) {
+                goto consume_and_stop;
+
+            case C_RPAREN:
                 if (p->paren_depth == 0) {
                     rv = ax_extra_rparen_err(p);
                 } else {
                     p->paren_depth--;
                     rv = AX_PARSE_RPAREN;
                 }
-            } else if (cc == C_WHITESPACE || cc == C_EOF) {
+                goto consume_and_stop;
+
+            case C_WHITESPACE:
                 rv = AX_PARSE_NOTHING;
-            } else {
+                goto consume_and_stop;
+
+            case C_DECIMAL:
+                printf("==== TODO: start parsing decimal ===\n");
+                NOT_IMPL();
+
+            default:
                 rv = ax_bad_char_err(p, *chars);
+                goto consume_and_stop;
             }
-            goto consume_and_stop;
-        }
 
         default: NO_SUCH_STATE();
         }
@@ -108,4 +125,18 @@ stop:
 consume_and_stop:
     chars++;
     goto stop;
+}
+
+enum ax_parse ax__parser_eof(struct ax_parser* p)
+{
+    if (p->paren_depth > 0) {
+        return ax_unmatch_lparen_err(p);
+    }
+
+    switch (p->state) {
+    case S_WHITESPACE:
+        return AX_PARSE_NOTHING;
+
+    default: NO_SUCH_STATE();
+    }
 }

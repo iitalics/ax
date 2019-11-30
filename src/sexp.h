@@ -36,6 +36,7 @@ enum ax_parse {
 enum ax_parse_error {
     AX_PARSE_ERROR_BAD_CHAR = 0,
     AX_PARSE_ERROR_EXTRA_RPAREN,
+    AX_PARSE_ERROR_UNMATCH_LPAREN,
     AX_PARSE_ERROR__MAX,
 };
 
@@ -55,15 +56,10 @@ extern enum ax_parse ax__parser_feed(struct ax_parser* p,
                                      char const* chars,
                                      char** out_chars);
 
+extern enum ax_parse ax__parser_eof(struct ax_parser* p);
+
 static inline enum ax_parse ax__parser_feedc(struct ax_parser* p, char c)
 {
-    char s[2];
-    s[0] = c;
-    s[1] = '\0';
+    char s[2] = { c, '\0' };
     return ax__parser_feed(p, s, NULL);
-}
-
-static inline enum ax_parse ax__parser_eof(struct ax_parser* p)
-{
-    return ax__parser_feedc(p, '\0');
 }
