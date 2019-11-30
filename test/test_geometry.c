@@ -140,3 +140,28 @@ TEST(shrink_3r)
     CHECK_DIMEQ(N(2)->target, AX_DIM(66.66, 80.0));
     CHECK_DIMEQ(N(3)->target, AX_DIM(66.66, 80.0));
 }
+
+TEST(shrink_3r_asym)
+{
+    struct ax_state* s = ax_new_state();
+    ax_set_dimensions(s, AX_DIM(200.0, 200.0));
+
+    struct ax_desc root =
+        CONT(AX_JUSTIFY_START,
+             AX_JUSTIFY_START,
+             FLEX_CHILD(0, 0, AX_JUSTIFY_START, RECT(0xff0000, 80.0, 80.0)),
+             FLEX_CHILD(0, 1, AX_JUSTIFY_START, RECT(0x00ff00, 80.0, 80.0)),
+             FLEX_CHILD(0, 1, AX_JUSTIFY_START, RECT(0x0000ff, 80.0, 80.0)));
+    root.c.single_line = true;
+
+    ax_set_root(s, &root);
+    CHECK_SZEQ(s->tree.count, (size_t) 4);
+    CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
+    CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
+    CHECK_POSEQ(N(1)->coord, AX_POS(0.0, 0.0));
+    CHECK_POSEQ(N(2)->coord, AX_POS(80.0, 0.0));
+    CHECK_POSEQ(N(3)->coord, AX_POS(140, 0.0));
+    CHECK_DIMEQ(N(1)->target, AX_DIM(80.0, 80.0)); // shrink_factor=0
+    CHECK_DIMEQ(N(2)->target, AX_DIM(60.0, 80.0));
+    CHECK_DIMEQ(N(3)->target, AX_DIM(60.0, 80.0));
+}
