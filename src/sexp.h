@@ -31,6 +31,7 @@ enum ax_parse {
     AX_PARSE_LPAREN,
     AX_PARSE_RPAREN,
     AX_PARSE_INTEGER,
+    AX_PARSE_SYMBOL,
     AX_PARSE__MAX,
 };
 
