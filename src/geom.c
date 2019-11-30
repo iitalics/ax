@@ -47,6 +47,7 @@ static void ax_container_distribute_lines(struct ax_tree* tr, struct ax_node* no
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     size_t* const line_count = calloc(ax_n_children(tr, node), sizeof(size_t));
+    ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
     ax_length const avail_size = MAIN(node->avail);
     size_t i = 0;
     ax_length line_size = 0.0;
@@ -65,6 +66,15 @@ static void ax_container_distribute_lines(struct ax_tree* tr, struct ax_node* no
     node->c.n_lines = n_lines;
 }
 
+static void ax_container_single_line(struct ax_tree* tr, struct ax_node* node)
+{
+    size_t* const line_count = malloc(1 * sizeof(size_t));
+    ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
+    line_count[0] = ax_n_children(tr, node);
+    node->c.line_count = line_count;
+    node->c.n_lines = 1;
+}
+
 static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
 {
     struct ax_dim hypoth;
@@ -72,25 +82,31 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
     switch (node->ty) {
 
     case AX_NODE_CONTAINER: {
-        ax_container_distribute_lines(tr, node);
-        hypoth = AX_DIM(0.0, 0.0);
+        if (node->c.single_line) {
+            ax_container_single_line(tr, node);
+        } else {
+            ax_container_distribute_lines(tr, node);
+        }
+        ax_length main = 0.0, cross = 0.0;
         struct ax_dim line = AX_DIM(0.0, 0.0);
-#define UPDATE_HYPOTH() do {                                            \
-            CROSS(hypoth) = CROSS(hypoth) + CROSS(line);                \
-            MAIN(hypoth) = MAX(MAIN(hypoth), MAIN(line)); } while (0)
+#define UPDATE() do {                                            \
+            cross = cross + CROSS(line);                \
+            main = MAX(main, MAIN(line)); } while (0)
         size_t li, i, prev_li = 0;
         FOR_EACH_CHILD_IN_LINES(li, i, node, child) {
             if (li != prev_li) {
                 prev_li = li;
-                UPDATE_HYPOTH();
+                UPDATE();
                 line = AX_DIM(0.0, 0.0);
             }
             MAIN(line) = MAIN(line) + MAIN(child->hypoth);
             CROSS(line) = MAX(CROSS(line), CROSS(child->hypoth));
         }
         if (i > 0) {
-            UPDATE_HYPOTH();
+            UPDATE();
         }
+        MAIN(hypoth) = MIN(main, MAIN(node->avail));
+        CROSS(hypoth) = MIN(cross, CROSS(node->avail));
         break;
 #undef UPDATE_HYPOTH
     }
@@ -142,14 +158,11 @@ static void ax_resolve_target_size(struct ax_tree* tr, struct ax_node* node)
     switch (node->ty) {
 
     case AX_NODE_CONTAINER: {
-        ax_length free_space = MAIN(node->target);
-        FOR_EACH_CHILD(node, child) {
-            free_space -= MAIN(node->hypoth);
-        }
         // TODO: pool allocation of these temporary arrays
         struct line_calc {
             ax_length factor_sum;
             ax_length cross_size;
+            ax_length free_space;
         };
         struct line_calc* const lines = calloc(node->c.n_lines, sizeof(struct line_calc));
         ASSERT(lines != NULL, "malloc line_calc array");
@@ -157,21 +170,34 @@ static void ax_resolve_target_size(struct ax_tree* tr, struct ax_node* node)
         for (li = 0; li < node->c.n_lines; li++) {
             lines[li].factor_sum = 0.0;
             lines[li].cross_size = 0.0;
+            lines[li].free_space = MAIN(node->target);
         }
         FOR_EACH_CHILD_IN_LINES(li, i, node, child) {
-            lines[li].factor_sum += child->grow_factor;
             lines[li].cross_size = MAX(lines[li].cross_size, CROSS(child->hypoth));
+            lines[li].free_space -= MAIN(child->hypoth);
+        }
+#define FACTOR(_n)                                      \
+        (did_overflow ?                                 \
+         ((_n)->shrink_factor * MAIN((_n)->hypoth)) :   \
+         (_n)->grow_factor)
+        FOR_EACH_CHILD_IN_LINES(li, i, node, child) {
+            bool did_overflow = lines[li].free_space < 0;
+            lines[li].factor_sum += FACTOR(child);
         }
         FOR_EACH_CHILD_IN_LINES(li, i, node, child) {
-            ax_length flex = 0.0;
-            if (child->grow_factor != 0) {
-                flex = free_space * child->grow_factor / lines[li].factor_sum;
+            bool did_overflow = lines[li].free_space < 0;
+            ax_length flex, factor = FACTOR(child);
+            if (factor > 0) {
+                flex = lines[li].free_space * FACTOR(child) / lines[li].factor_sum;
+            } else {
+                flex = 0.0;
             }
             MAIN(child->target) = MAIN(child->hypoth) + flex;
-            CROSS(child->target) = CROSS(child->hypoth); //lines[li].cross_size;
+            CROSS(child->target) = lines[li].cross_size;
         }
         free(lines);
         break;
+#undef FACTOR
     }
 
     case AX_NODE_RECTANGLE:

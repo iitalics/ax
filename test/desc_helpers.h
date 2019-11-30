@@ -9,6 +9,7 @@
     { .ty = AX_NODE_CONTAINER,                  \
       .c = { .n_children = LENGTH(_c),          \
              .children = (_c),                  \
+             .single_line = false,              \
              .main_justify = (_mj),             \
              .cross_justify = (_xj) } }         \
 

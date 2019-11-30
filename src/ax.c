@@ -35,6 +35,7 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->c.line_count = NULL;
         node->c.main_justify = desc->c.main_justify;
         node->c.cross_justify = desc->c.cross_justify;
+        node->c.single_line = desc->c.single_line;
         node_id prev_id = NULL_ID;
         for (size_t i = 0; i < desc->c.n_children; i++) {
             struct ax_flex_child_desc flex_child = desc->c.children[i];

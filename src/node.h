@@ -13,6 +13,7 @@ struct ax_node_c {
     size_t* line_count;
     enum ax_justify main_justify;
     enum ax_justify cross_justify;
+    bool single_line;
 };
 
 struct ax_node_t {

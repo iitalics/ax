@@ -96,12 +96,15 @@ int main(int argc, char** argv)
               children);
     */
 
-    const struct ax_desc root_desc =
+    struct ax_desc root_desc =
         CONT(
-            AX_JUSTIFY_CENTER,
-            AX_JUSTIFY_CENTER,
+            AX_JUSTIFY_BETWEEN,
+            AX_JUSTIFY_BETWEEN,
             FLEX_CHILD(0, 1, 0,
-                       TEXT(0x000000, "Hello, to the world", a_font)));
+                       TEXT(0x111111, "Hello, world ...", a_font)),
+            FLEX_CHILD(0, 1, 0,
+                       TEXT(0x444444, "... goodbye, world", a_font)));
+    root_desc.c.single_line = true;
 
     ax = ax_new_state();
     ax_set_dimensions(ax, AX_DIM(width, height));

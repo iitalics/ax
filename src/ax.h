@@ -45,7 +45,9 @@ struct ax_desc_t {
 struct ax_desc_c {
     const struct ax_flex_child_desc* children;
     size_t n_children;
-    enum ax_justify main_justify, cross_justify;
+    enum ax_justify main_justify;
+    enum ax_justify cross_justify;
+    bool single_line;
 };
 
 struct ax_desc_r {
