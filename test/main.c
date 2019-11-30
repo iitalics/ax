@@ -5,6 +5,9 @@
 char _ax_test_fail_reason[1024] = {0};
 char _ax_test_fail_loc[256] = {0};
 
+const char* _ax_true_str = "true";
+const char* _ax_false_str = "false";
+
 static int n_ran = 0, n_ok = 0;
 static jmp_buf test_fail_jump;
 

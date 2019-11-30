@@ -8,6 +8,9 @@ extern char _ax_test_fail_reason[1024];
 extern char _ax_test_fail_loc[256];
 extern void _ax_test_fail();
 
+extern const char* _ax_true_str;
+extern const char* _ax_false_str;
+
 /* int fmt_int(char* dst, int x) { return sprintf(dst, "%d", x); } */
 /* int fmt_float(char* dst, float x) { return sprintf(dst, "%.3f", x); } */
 /* int eq_int(int x, int y) { return x == y; } */
@@ -47,6 +50,12 @@ extern void _ax_test_fail();
     CHECK((void*) (_lhs) == (void*) (_rhs),     \
           "%p does not equal %p",               \
           (_lhs), (_rhs))
+
+#define CHECK_BEQ(_lhs, _rhs)                       \
+    CHECK((_lhs) == (_rhs),                         \
+          "%s does not equal %s",                   \
+          (_lhs) ? _ax_true_str : _ax_false_str,    \
+          (_rhs) ? _ax_true_str : _ax_false_str)
 
 static inline int _ax_float_eq_threshold(float t, float x, float y)
 {
