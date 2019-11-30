@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "utils.h"
 
 /*
  * SEXP = NUM
@@ -49,13 +50,20 @@ struct ax_parser {
 
 extern void ax__parser_init(struct ax_parser* p);
 extern void ax__parser_free(struct ax_parser* p);
-extern bool ax__parser_eof_ok(struct ax_parser* p);
 
 extern enum ax_parse ax__parser_feed(struct ax_parser* p,
-                                     char const* chars, size_t len,
+                                     char const* chars,
                                      char** out_chars);
 
-static inline enum ax_parse ax__parse_feedc(struct ax_parser* p, char c)
+static inline enum ax_parse ax__parser_feedc(struct ax_parser* p, char c)
 {
-    return ax__parser_feed(p, &c, 1, NULL);
+    char s[2];
+    s[0] = c;
+    s[1] = '\0';
+    return ax__parser_feed(p, s, NULL);
+}
+
+static inline enum ax_parse ax__parser_eof(struct ax_parser* p)
+{
+    return ax__parser_feedc(p, '\0');
 }

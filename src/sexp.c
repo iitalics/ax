@@ -26,16 +26,6 @@ void ax__parser_free(struct ax_parser* p)
     free(p->str);
 }
 
-bool ax__parser_eof_ok(struct ax_parser* p)
-{
-    switch (p->state) {
-    case S_WHITESPACE:
-        return p->paren_depth == 0;
-
-    default: NO_SUCH_STATE();
-    }
-}
-
 
 enum char_class ax__char_class(char c)
 {
@@ -46,6 +36,7 @@ enum char_class ax__char_class(char c)
     case '-': case '_': return C_OTHERSYM;
     case '#': return C_HASH;
     case '"': return C_QUOTE;
+    case '\0': return C_EOF;
     default:
         if (c >= '0' && c <= '9') {
             return C_DECIMAL;
@@ -76,38 +67,32 @@ static enum ax_parse ax_extra_rparen_err(struct ax_parser* p)
 }
 
 enum ax_parse ax__parser_feed(struct ax_parser* p,
-                              char const* chars, size_t len,
+                              char const* chars,
                               char** out_chars)
 {
     enum ax_parse rv;
-    size_t i;
-    for (i = 0; i < len; i++) {
-        char c = chars[i];
+    for (;; chars++) {
         switch (p->state) {
-        case S_WHITESPACE:
-            switch (c) {
-            case '(':
+
+        case S_WHITESPACE: {
+            enum char_class cc = ax__char_class(*chars);
+            if (cc == C_LPAREN) {
                 p->paren_depth++;
                 rv = AX_PARSE_LPAREN;
-                goto consume_and_stop;
-
-            case ')':
+            } else if (cc == C_RPAREN) {
                 if (p->paren_depth == 0) {
                     rv = ax_extra_rparen_err(p);
                 } else {
                     p->paren_depth--;
                     rv = AX_PARSE_RPAREN;
                 }
-                goto consume_and_stop;
-
-            case ' ': case '\t': case '\f': case '\r': case '\n':
-                break;
-
-            default:
-                rv = ax_bad_char_err(p, c);
-                goto consume_and_stop;
+            } else if (cc == C_WHITESPACE || cc == C_EOF) {
+                rv = AX_PARSE_NOTHING;
+            } else {
+                rv = ax_bad_char_err(p, *chars);
             }
-            break;
+            goto consume_and_stop;
+        }
 
         default: NO_SUCH_STATE();
         }
@@ -116,11 +101,11 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
 
 stop:
     if (out_chars != NULL) {
-        *out_chars = (char*) &chars[i];
+        *out_chars = (char*) chars;
     }
     return rv;
 
 consume_and_stop:
-    i++;
+    chars++;
     goto stop;
 }
