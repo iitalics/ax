@@ -30,6 +30,7 @@ TEST(build_tree)
     CHECK_IEQ(N(2)->ty, AX_NODE_RECTANGLE);
     CHECK_IEQ_HEX(N(1)->r.fill, 0xff0000);
     CHECK_IEQ_HEX(N(2)->r.fill, 0x0000ff);
+    ax_destroy_state(s);
 }
 
 
@@ -45,6 +46,7 @@ TEST(build_tree)
         ax_set_root(s, &root);                                  \
         CHECK_POSEQ(N(1)->coord, AX_POS(_x0, _y0));             \
         CHECK_POSEQ(N(2)->coord, AX_POS(_x1, _y1));             \
+        ax_destroy_state(s);                                    \
     } while(0)
 
 TEST(main_justify_start_2r)
@@ -139,6 +141,7 @@ TEST(shrink_3r)
     CHECK_DIMEQ(N(1)->target, AX_DIM(66.66, 80.0));
     CHECK_DIMEQ(N(2)->target, AX_DIM(66.66, 80.0));
     CHECK_DIMEQ(N(3)->target, AX_DIM(66.66, 80.0));
+    ax_destroy_state(s);
 }
 
 TEST(shrink_3r_asym)
@@ -164,4 +167,5 @@ TEST(shrink_3r_asym)
     CHECK_DIMEQ(N(1)->target, AX_DIM(80.0, 80.0)); // shrink_factor=0
     CHECK_DIMEQ(N(2)->target, AX_DIM(60.0, 80.0));
     CHECK_DIMEQ(N(3)->target, AX_DIM(60.0, 80.0));
+    ax_destroy_state(s);
 }
