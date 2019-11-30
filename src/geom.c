@@ -99,10 +99,34 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
         break;
 
     case AX_NODE_TEXT: {
-        // TODO: break into lines based on node->avail.w
+        size_t n_lines = 0;
+        ax_length max_w = 0.0;
         struct ax_text_metrics tm;
-        ax__measure_text(node->t.desc.font, node->t.desc.text, &tm);
-        hypoth = AX_DIM(tm.width, tm.text_height);
+        struct ax_text_iter ti;
+        enum ax_text_elem te;
+        ax__text_iter_init(&ti, node->t.desc.text);
+        ax__text_iter_set_font(&ti, node->t.desc.font);
+        ti.max_width = node->avail.w;
+        do {
+            te = ax__text_iter_next(&ti);
+            switch (te) {
+            case AX_TEXT_WORD:
+                break;
+
+            case AX_TEXT_EOL:
+            case AX_TEXT_END:
+                ax__measure_text(node->t.desc.font, ti.line, &tm);
+                n_lines++;
+                max_w = MAX(max_w, tm.width);
+                break;
+
+            default: NO_SUCH_TAG("ax_text_elem");
+            }
+        } while (te != AX_TEXT_END);
+        ax__text_iter_free(&ti);
+
+        hypoth.w = max_w;
+        hypoth.h = tm.text_height + tm.line_spacing * (n_lines - 1);
         break;
     }
 
