@@ -57,6 +57,9 @@ extern const char* _ax_false_str;
           (_lhs) ? _ax_true_str : _ax_false_str,    \
           (_rhs) ? _ax_true_str : _ax_false_str)
 
+#define CHECK_TRUE(_x) CHECK_BEQ(_x, true)
+#define CHECK_FALSE(_x) CHECK_BEQ(_x, false)
+
 static inline int _ax_float_eq_threshold(float t, float x, float y)
 {
     if (x < y) {

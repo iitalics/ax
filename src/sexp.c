@@ -1,6 +1,7 @@
+#include <ctype.h>
 #include "sexp.h"
+#include "sexp_chars.h"
 #include "utils.h"
-
 
 enum state {
     S_WHITESPACE = 0,
@@ -35,6 +36,31 @@ bool ax__parser_eof_ok(struct ax_parser* p)
     }
 }
 
+
+enum char_class ax__char_class(char c)
+{
+    switch (c) {
+    case '(': return C_LPAREN;
+    case ')': return C_RPAREN;
+    case ' ': case '\t': case '\r': case '\n': return C_WHITESPACE;
+    case '-': case '_': return C_OTHERSYM;
+    case '#': return C_HASH;
+    case '"': return C_QUOTE;
+    default:
+        if (c >= '0' && c <= '9') {
+            return C_DECIMAL;
+        } else if ((c >= 'a' && c <= 'f') ||
+                   (c >= 'A' && c <= 'F')) {
+            return C_HEXALPHA;
+        } else if ((c >= 'a' && c <= 'z') ||
+                   (c >= 'A' && c <= 'Z')) {
+            return C_ALPHA;
+        } else {
+            return C_INVALID;
+        }
+    }
+}
+
 static enum ax_parse ax_bad_char_err(struct ax_parser* p, char c)
 {
     p->len = sprintf(p->str, "invalid character `%c'", c);
@@ -55,7 +81,6 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
 {
     enum ax_parse rv;
     size_t i;
-
     for (i = 0; i < len; i++) {
         char c = chars[i];
         switch (p->state) {
@@ -64,35 +89,38 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
             case '(':
                 p->paren_depth++;
                 rv = AX_PARSE_LPAREN;
-                goto stop;
+                goto consume_and_stop;
 
             case ')':
                 if (p->paren_depth == 0) {
                     rv = ax_extra_rparen_err(p);
-                    goto stop;
                 } else {
                     p->paren_depth--;
                     rv = AX_PARSE_RPAREN;
-                    goto stop;
                 }
+                goto consume_and_stop;
 
             case ' ': case '\t': case '\f': case '\r': case '\n':
                 break;
 
             default:
                 rv = ax_bad_char_err(p, c);
-                goto stop;
+                goto consume_and_stop;
             }
             break;
 
         default: NO_SUCH_STATE();
         }
     }
-
     rv = AX_PARSE_NOTHING;
+
 stop:
     if (out_chars != NULL) {
         *out_chars = (char*) &chars[i];
     }
     return rv;
+
+consume_and_stop:
+    i++;
+    goto stop;
 }
