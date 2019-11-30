@@ -99,8 +99,7 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
                 goto consume_and_stop;
 
             case C_WHITESPACE:
-                rv = AX_PARSE_NOTHING;
-                goto consume_and_stop;
+                break;
 
             case C_DECIMAL:
                 printf("==== TODO: start parsing decimal ===\n");
@@ -110,6 +109,7 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
                 rv = ax_bad_char_err(p, *chars);
                 goto consume_and_stop;
             }
+            break;
 
         default: NO_SUCH_STATE();
         }

@@ -27,9 +27,9 @@
 
 enum ax_parse {
     AX_PARSE_NOTHING = 0,
+    AX_PARSE_ERROR,
     AX_PARSE_LPAREN,
     AX_PARSE_RPAREN,
-    AX_PARSE_ERROR,
     AX_PARSE__MAX,
 };
 

@@ -69,21 +69,26 @@ TEST(sexp_parens_simple)
 TEST(sexp_parens_spaces)
 {
     struct ax_parser p;
+    enum ax_parse r;
     ax__parser_init(&p);
-    CHECK_IEQ(ax__parser_feedc(&p, '('), AX_PARSE_LPAREN);
+    r = ax__parser_feedc(&p, '('); CHECK_IEQ(r, AX_PARSE_LPAREN);
     CHECK_SZEQ(p.paren_depth, (size_t) 1);
-    CHECK_IEQ(ax__parser_feedc(&p, '('), AX_PARSE_LPAREN);
+    r = ax__parser_feedc(&p, '('); CHECK_IEQ(r, AX_PARSE_LPAREN);
     CHECK_SZEQ(p.paren_depth, (size_t) 2);
-    CHECK_IEQ(ax__parser_feedc(&p, ' '), AX_PARSE_NOTHING);
-    CHECK_IEQ(ax__parser_feedc(&p, ')'), AX_PARSE_RPAREN);
-    CHECK_IEQ(ax__parser_feedc(&p, ' '), AX_PARSE_NOTHING);
-    CHECK_IEQ(ax__parser_feedc(&p, '\n'), AX_PARSE_NOTHING);
+    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
+
+    char s[] = " \n)";
+    char* a;
+    r = ax__parser_feed(&p, s, &a); CHECK_IEQ(r, AX_PARSE_RPAREN);
+    CHECK_PEQ(a, &s[3]);
     CHECK_SZEQ(p.paren_depth, (size_t) 1);
-    CHECK_IEQ(ax__parser_feedc(&p, ')'), AX_PARSE_RPAREN);
+
+    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    r = ax__parser_feedc(&p, ')'); CHECK_IEQ(r, AX_PARSE_RPAREN);
     CHECK_SZEQ(p.paren_depth, (size_t) 0);
-    CHECK_IEQ(ax__parser_feedc(&p, '\t'), AX_PARSE_NOTHING);
-    CHECK_IEQ(ax__parser_feedc(&p, ' '), AX_PARSE_NOTHING);
-    CHECK_BEQ(ax__parser_eof(&p), AX_PARSE_NOTHING);
+    r = ax__parser_feedc(&p, '\t'); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    r = ax__parser_eof(&p); CHECK_BEQ(r, AX_PARSE_NOTHING);
     ax__parser_free(&p);
 }
 
