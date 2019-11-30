@@ -31,6 +31,11 @@ extern const char* _ax_false_str;
           "%d does not equal %d",               \
           (_lhs), (_rhs))
 
+#define CHECK_LEQ(_lhs, _rhs)                   \
+    CHECK((_lhs) == (_rhs),                     \
+          "%ld does not equal %ld",               \
+          (_lhs), (_rhs))
+
 #define CHECK_SZEQ(_lhs, _rhs)                  \
     CHECK((_lhs) == (_rhs),                     \
           "%zu does not equal %zu",             \

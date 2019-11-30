@@ -4,7 +4,8 @@
 #include "utils.h"
 
 enum state {
-    S_WHITESPACE = 0,
+    S_NOTHING = 0,
+    S_INTEGER = 1,
     S__MAX,
 };
 
@@ -12,7 +13,7 @@ enum state {
 
 void ax__parser_init(struct ax_parser* p)
 {
-    p->state = S_WHITESPACE;
+    p->state = S_NOTHING;
     p->str = malloc(32);
     ASSERT(p->str != NULL, "malloc ax_parser.str");
     p->str[0] = '\0';
@@ -72,46 +73,77 @@ static enum ax_parse ax_unmatch_lparen_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
+static inline long digit(char c) { return c - '0'; }
+
+static enum ax_parse ax_end_state(struct ax_parser* p)
+{
+    switch (p->state) {
+    case S_NOTHING:
+        return AX_PARSE_NOTHING;
+    case S_INTEGER:
+        p->state = S_NOTHING;
+        return AX_PARSE_INTEGER;
+    default: NO_SUCH_STATE();
+    }
+}
+
+enum ax_parse ax__parser_eof(struct ax_parser* p)
+{
+    if (p->paren_depth > 0) {
+        p->paren_depth = 0;
+        return ax_unmatch_lparen_err(p);
+    }
+    return ax_end_state(p);
+}
+
 enum ax_parse ax__parser_feed(struct ax_parser* p,
                               char const* chars,
                               char** out_chars)
 {
     enum ax_parse rv;
+    char ch;
     enum char_class cc;
-    for (; *chars != '\0'; chars++) {
-        cc = ax__char_class(*chars);
-        switch (p->state) {
+    for (; (ch = *chars) != '\0'; chars++) {
+        cc = ax__char_class(ch);
+        if ((cc & C_DELIMIT_MASK) && p->state != S_NOTHING) {
+            rv = ax_end_state(p);
+            goto stop; // doesn't consume char
+        }
 
-        case S_WHITESPACE:
-            switch (cc) {
-            case C_LPAREN:
-                p->paren_depth++;
-                rv = AX_PARSE_LPAREN;
-                goto consume_and_stop;
+        switch (cc) {
+        case C_WHITESPACE:
+            break;
 
-            case C_RPAREN:
-                if (p->paren_depth == 0) {
-                    rv = ax_extra_rparen_err(p);
-                } else {
-                    p->paren_depth--;
-                    rv = AX_PARSE_RPAREN;
-                }
-                goto consume_and_stop;
+        case C_LPAREN:
+            p->paren_depth++;
+            rv = AX_PARSE_LPAREN;
+            goto consume_and_stop;
 
-            case C_WHITESPACE:
+        case C_RPAREN:
+            if (p->paren_depth == 0) {
+                rv = ax_extra_rparen_err(p);
+            } else {
+                p->paren_depth--;
+                rv = AX_PARSE_RPAREN;
+            }
+            goto consume_and_stop;
+
+        case C_DECIMAL:
+            switch (p->state) {
+            case S_INTEGER:
+                p->i = p->i * 10 + digit(ch);
                 break;
 
-            case C_DECIMAL:
-                printf("==== TODO: start parsing decimal ===\n");
-                NOT_IMPL();
-
             default:
-                rv = ax_bad_char_err(p, *chars);
-                goto consume_and_stop;
+                p->state = S_INTEGER;
+                p->i = digit(ch);
+                break;
             }
             break;
 
-        default: NO_SUCH_STATE();
+        default:
+            rv = ax_bad_char_err(p, ch);
+            goto consume_and_stop;
         }
     }
     rv = AX_PARSE_NOTHING;
@@ -125,18 +157,4 @@ stop:
 consume_and_stop:
     chars++;
     goto stop;
-}
-
-enum ax_parse ax__parser_eof(struct ax_parser* p)
-{
-    if (p->paren_depth > 0) {
-        return ax_unmatch_lparen_err(p);
-    }
-
-    switch (p->state) {
-    case S_WHITESPACE:
-        return AX_PARSE_NOTHING;
-
-    default: NO_SUCH_STATE();
-    }
 }

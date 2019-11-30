@@ -130,3 +130,34 @@ TEST(sexp_err_unmatch_lparen)
     CHECK_STREQ(p.str, "unmatched `('");
     ax__parser_free(&p);
 }
+
+TEST(sexp_1i)
+{
+    struct ax_parser p;
+    enum ax_parse r;
+    ax__parser_init(&p);
+    char s[] = "123";
+    char* a;
+    r = ax__parser_feed(&p, s, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    CHECK_PEQ(a, &s[3]);
+    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_INTEGER);
+    CHECK_LEQ(p.i, (long) 123);
+    ax__parser_free(&p);
+}
+
+TEST(sexp_2i)
+{
+    struct ax_parser p;
+    enum ax_parse r;
+    ax__parser_init(&p);
+    char s[] = "123 456";
+    char* a;
+    r = ax__parser_feed(&p, s, &a); CHECK_IEQ(r, AX_PARSE_INTEGER);
+    CHECK_PEQ(a, &s[3]);
+    CHECK_LEQ(p.i, (long) 123);
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    CHECK_PEQ(a, &s[7]);
+    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_INTEGER);
+    CHECK_LEQ(p.i, (long) 456);
+    ax__parser_free(&p);
+}

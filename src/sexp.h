@@ -30,6 +30,7 @@ enum ax_parse {
     AX_PARSE_ERROR,
     AX_PARSE_LPAREN,
     AX_PARSE_RPAREN,
+    AX_PARSE_INTEGER,
     AX_PARSE__MAX,
 };
 
@@ -46,6 +47,8 @@ struct ax_parser {
     size_t len, cap;
     size_t paren_depth;
     enum ax_parse_error err;
+
+    long i;
 };
 
 
