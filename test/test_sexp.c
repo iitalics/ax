@@ -21,6 +21,7 @@ TEST(sexp_chars)
 
     CHECK_TRUE((C_DECIMAL & C_HEX_MASK) != 0);
     CHECK_TRUE((C_HEXALPHA & C_HEX_MASK) != 0);
+    CHECK_TRUE((C_ALPHA & C_HEX_MASK) == 0);
     CHECK_TRUE((C_OTHERSYM & C_HEX_MASK) == 0);
 
     CHECK_IEQ_HEX(ax__char_class('('), C_LPAREN);
@@ -190,5 +191,42 @@ TEST(sexp_3s)
     CHECK_PEQ(a, &s[11]);
     r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_SYMBOL);
     CHECK_STREQ(p.str, "baz");
+    ax__parser_free(&p);
+}
+
+TEST(sexp_sym_with_digits)
+{
+    struct ax_parser p;
+    enum ax_parse r;
+    ax__parser_init(&p);
+    char s[] = "foo bar123 baz";
+    char* a = s;
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
+    CHECK_PEQ(a, &s[3]);
+    CHECK_STREQ(p.str, "foo");
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
+    CHECK_PEQ(a, &s[10]);
+    CHECK_STREQ(p.str, "bar123");
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
+    CHECK_PEQ(a, &s[14]);
+    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_SYMBOL);
+    CHECK_STREQ(p.str, "baz");
+    ax__parser_free(&p);
+}
+
+TEST(sexp_2S)
+{
+    struct ax_parser p;
+    enum ax_parse r;
+    ax__parser_init(&p);
+    char s[] = "\"hello\" \"world\"";
+    char* a = s;
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_STRING);
+    CHECK_PEQ(a, &s[7]);
+    CHECK_STREQ(p.str, "hello");
+    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_STRING);
+    CHECK_PEQ(a, &s[15]);
+    CHECK_STREQ(p.str, "world");
+    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_NOTHING);
     ax__parser_free(&p);
 }

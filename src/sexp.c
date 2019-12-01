@@ -7,6 +7,7 @@ enum state {
     S_NOTHING = 0,
     S_INTEGER,
     S_SYMBOL,
+    S_QUOTE_STRING,
     S__MAX,
 };
 
@@ -77,6 +78,14 @@ static enum ax_parse ax_unmatch_lparen_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
+static enum ax_parse ax_unmatch_quote_err(struct ax_parser* p)
+{
+    p->len = sprintf(p->str, "unmatched \"");
+    p->err = AX_PARSE_ERROR_UNMATCH_QUOTE;
+    p->state = S_NOTHING;
+    return AX_PARSE_ERROR;
+}
+
 static enum ax_parse ax_end_state(struct ax_parser* p)
 {
     switch (p->state) {
@@ -88,6 +97,8 @@ static enum ax_parse ax_end_state(struct ax_parser* p)
     case S_SYMBOL:
         p->state = S_NOTHING;
         return AX_PARSE_SYMBOL;
+    case S_QUOTE_STRING:
+        return ax_unmatch_quote_err(p);
     default: NO_SUCH_STATE();
     }
 }
@@ -145,6 +156,7 @@ static inline enum ax_parse ax_sym0(struct ax_parser* p, char ch)
     case S_INTEGER:
         return ax_bad_char_err(p, ch);
 
+    case S_QUOTE_STRING: ASSERT(0, "should not be reachable");
     default: NO_SUCH_STATE();
     }
 }
@@ -168,7 +180,30 @@ static enum ax_parse ax_decimal(struct ax_parser* p, char ch)
         ax_sym1(p, ch);
         return AX_PARSE_NOTHING;
 
+    case S_QUOTE_STRING: ASSERT(0, "should not be reachable");
     default: NO_SUCH_STATE();
+    }
+}
+
+static enum ax_parse ax_quote(struct ax_parser* p)
+{
+    p->state = S_QUOTE_STRING;
+    p->len = 0;
+    p->str[0] = '\0';
+    return AX_PARSE_NOTHING;
+}
+
+static enum ax_parse ax_quoted_char(struct ax_parser* p, char ch)
+{
+    ASSERT(p->state == S_QUOTE_STRING, "should be in QUOTE_STRING state");
+    if (ch == '\"') {
+        p->state = S_NOTHING;
+        return AX_PARSE_STRING;
+    } else {
+        ASSERT(p->len + 1 < p->cap, "string too big!");
+        p->str[p->len++] = ch;
+        p->str[p->len] = '\0';
+        return AX_PARSE_NOTHING;
     }
 }
 
@@ -181,14 +216,18 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
     while ((ch = *chars) != '\0') {
         enum ax_parse r;
         enum char_class cc = ax__char_class(ch);
-        if ((cc & C_DELIMIT_MASK) && p->state != S_NOTHING) {
+        if (p->state == S_QUOTE_STRING) {
+            r = ax_quoted_char(p, ch);
+            chars++;
+        } else if ((cc & C_DELIMIT_MASK) && p->state != S_NOTHING) {
             r = ax_end_state(p);
-        } else {
+        }  else {
             switch (cc) {
             case C_WHITESPACE: r = AX_PARSE_NOTHING; break;
             case C_LPAREN: r = ax_lparen(p); break;
             case C_RPAREN: r = ax_rparen(p); break;
             case C_DECIMAL: r = ax_decimal(p, ch); break;
+            case C_QUOTE: r = ax_quote(p); break;
             default:
                 if (cc & C_SYM0_MASK) {
                     r = ax_sym0(p, ch);
