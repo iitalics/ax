@@ -117,6 +117,10 @@ int main(int argc, char** argv)
     ax_set_dimensions(ax, AX_DIM(width, height));
     ax_set_root(ax, &root_desc);
 
+    if (ax_read(ax, "(log \"Hello, world\")") != 0) {
+        goto ax_error;
+    }
+
     for (;;) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -193,6 +197,11 @@ int main(int argc, char** argv)
 
 exit:
     rv = 0;
+    goto cleanup;
+
+ax_error:
+    printf("ERROR: %s\n", ax_get_error(ax));
+    rv = 1;
     goto cleanup;
 
 sdl_error:

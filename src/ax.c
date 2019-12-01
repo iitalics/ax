@@ -137,12 +137,19 @@ static struct ax_desc const empty_node_desc = {
     },
 };
 
+static void ax_interp_init(struct ax_interp* it);
+static void ax_interp_free(struct ax_interp* it);
+static int ax_interp(struct ax_interp* it,
+                     struct ax_parser* ps, enum ax_parse p);
+
 struct ax_state* ax_new_state()
 {
     struct ax_state* s = malloc(sizeof(struct ax_state));
     ASSERT(s != NULL, "malloc ax_state");
     s->root_dim = AX_DIM(0.0, 0.0);
     s->draw_buf = ax__create_drawbuf();
+    ax_interp_init(&s->interp);
+    ax__parser_init(&s->parser);
     ax_init_tree(&s->tree);
     ax_tree_set_root(&s->tree, &empty_node_desc);
     return s;
@@ -151,6 +158,8 @@ struct ax_state* ax_new_state()
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
+        ax__parser_free(&s->parser);
+        ax_interp_free(&s->interp);
         ax__free_drawbuf(s->draw_buf);
         ax_free_tree_data(&s->tree);
         free(s);
@@ -187,4 +196,64 @@ void ax_set_root(struct ax_state* s, const struct ax_desc* root_desc)
 const struct ax_drawbuf* ax_draw(struct ax_state* s)
 {
     return s->draw_buf;
+}
+
+
+const char* ax_get_error(struct ax_state* s)
+{
+    (void) s;
+    return "";
+}
+
+
+void ax_read_start(struct ax_state* s)
+{
+    ax_interp_free(&s->interp);
+    ax_interp_init(&s->interp);
+    ax__parser_eof(&s->parser);
+}
+
+int ax_read_chunk(struct ax_state* s, const char* input)
+{
+    char* acc = (char*) input;
+    char const* end = input + strlen(input);
+    while (acc < end) {
+        enum ax_parse p = ax__parser_feed(&s->parser, acc, &acc);
+        int r = ax_interp(&s->interp, &s->parser, p);
+        if (r != 0) {
+            return r;
+        }
+    }
+    return 0;
+}
+
+int ax_read_end(struct ax_state* s)
+{
+    enum ax_parse p = ax__parser_eof(&s->parser);
+    return ax_interp(&s->interp, &s->parser, p);
+}
+
+
+enum {
+    R_TOPLEVEL = 0,
+    R__MAX,
+};
+
+static void ax_interp_init(struct ax_interp* it)
+{
+    it->state = R_TOPLEVEL;
+}
+
+static void ax_interp_free(struct ax_interp* it)
+{
+    (void) it;
+}
+
+static int ax_interp(struct ax_interp* it,
+                     struct ax_parser* ps, enum ax_parse p)
+{
+    (void) it;
+    (void) ps;
+    (void) p;
+    NOT_IMPL();
 }
