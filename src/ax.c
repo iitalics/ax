@@ -37,13 +37,15 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->c.cross_justify = desc->c.cross_justify;
         node->c.single_line = desc->c.single_line;
         node_id prev_id = NULL_ID;
-        for (size_t i = 0; i < desc->c.n_children; i++) {
-            struct ax_flex_child_attrs attrs = desc->c.children[i].flex_attrs;
-            node_id child_id = ax_build_node(tr, &desc->c.children[i]);
+        for (const struct ax_desc* child_desc = desc->c.first_child;
+             child_desc != NULL;
+             child_desc = child_desc->flex_attrs.next_child)
+        {
+            node_id child_id = ax_build_node(tr, child_desc);
             struct ax_node* child = ax_node_by_id(tr, child_id);
-            child->grow_factor = attrs.grow;
-            child->shrink_factor = attrs.shrink;
-            child->cross_justify = attrs.cross_justify;
+            child->grow_factor = child_desc->flex_attrs.grow;
+            child->shrink_factor = child_desc->flex_attrs.shrink;
+            child->cross_justify = child_desc->flex_attrs.cross_justify;
             if (ID_IS_NULL(prev_id)) {
                 ax_node_by_id(tr, id)->first_child_id = child_id;
             } else {
@@ -58,7 +60,7 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->r = desc->r;
         break;
 
-    case AX_NODE_TEXT:
+    case AX_NODE_TEXT: {
         node->t.desc = desc->t;
         char* text = malloc(strlen(desc->t.text) + 1);
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
@@ -66,6 +68,7 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->t.desc.text = text;
         node->t.lines = NULL;
         break;
+    }
 
     default: NO_SUCH_NODE_TAG();
     }
@@ -122,9 +125,13 @@ static void ax_tree_set_root(struct ax_tree* tr, const struct ax_desc* desc)
 
 static struct ax_desc const empty_node_desc = {
     .ty = AX_NODE_CONTAINER,
+    .parent = NULL,
+    .flex_attrs = {
+        .grow = 0, .shrink = 1, .cross_justify = AX_JUSTIFY_START,
+        .next_child = NULL,
+    },
     .c = {
-        .children = NULL,
-        .n_children = 0,
+        .first_child = NULL,
         .main_justify = AX_JUSTIFY_START,
         .cross_justify = AX_JUSTIFY_START
     },

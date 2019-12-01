@@ -75,39 +75,43 @@ int main(int argc, char** argv)
         goto ttf_error;
     }
 
+    struct ax_desc root_desc;
     struct ax_desc children[5];
+
     for (size_t i = 0; i < LENGTH(children); i++) {
-        struct ax_desc d;
-        d.ty = AX_NODE_RECTANGLE;
-        d.flex_attrs.grow = 0;
-        d.flex_attrs.shrink = (i == 0) ? 0 : 1;
-        d.flex_attrs.cross_justify = AX_JUSTIFY_CENTER;
-        d.r.fill = ax__lerp_colors(0xffcc11, // #fc1
-                                   0x8822ff, // #82f
-                                   i, LENGTH(children));
-        d.r.size = AX_DIM(100.0 + i * 5.0, 100.0 + i * 30.0);
-        children[i] = d;
+        struct ax_desc* next_child =
+            (i + 1 < LENGTH(children)) ?
+            &children[i + 1] :
+            NULL;
+        children[i] = (struct ax_desc) {
+            .ty = AX_NODE_RECTANGLE,
+            .parent = &root_desc,
+            .flex_attrs = {
+                .grow = 0,
+                .shrink = (i == 0) ? 0 : 1,
+                .cross_justify = AX_JUSTIFY_CENTER,
+                .next_child = next_child,
+            },
+            .r = {
+                .fill = ax__lerp_colors(0xffcc11, // #fc1
+                                        0x8822ff, // #82f
+                                        i, LENGTH(children)),
+                .size = AX_DIM(100.0 + i * 5.0, 100.0 + i * 30.0),
+            },
+        };
     }
 
-    struct ax_desc root_desc;
-    root_desc.ty = AX_NODE_CONTAINER;
-    root_desc.c.children = children;
-    root_desc.c.n_children = LENGTH(children);
-    root_desc.c.main_justify = AX_JUSTIFY_EVENLY;
-    root_desc.c.cross_justify = AX_JUSTIFY_BETWEEN;
-    root_desc.c.single_line = true;
-
-    /*
-    struct ax_desc root_desc =
-        CONT(
-            AX_JUSTIFY_BETWEEN,
-            AX_JUSTIFY_BETWEEN,
-            FLEX_CHILD(0, 1, 0,
-                       TEXT(0x111111, "Hello, world ...", a_font)),
-            FLEX_CHILD(0, 1, 0,
-                       TEXT(0x444444, "... goodbye, world", a_font)));
-    root_desc.c.single_line = true;
-    */
+    root_desc = (struct ax_desc) {
+        .ty = AX_NODE_CONTAINER,
+        .parent = NULL,
+        .flex_attrs = { .next_child = NULL },
+        .c = {
+            .first_child = &children[0],
+            .main_justify = AX_JUSTIFY_EVENLY,
+            .cross_justify = AX_JUSTIFY_BETWEEN,
+            .single_line = true,
+        },
+    };
 
     ax = ax_new_state();
     ax_set_dimensions(ax, AX_DIM(width, height));
