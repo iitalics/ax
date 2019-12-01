@@ -16,17 +16,32 @@ enum state {
 void ax__parser_init(struct ax_parser* p)
 {
     p->state = S_NOTHING;
-    p->str = malloc(32);
-    ASSERT(p->str != NULL, "malloc ax_parser.str");
-    p->str[0] = '\0';
     p->len = 0;
     p->cap = 32;
     p->paren_depth = 0;
+    p->str = malloc(p->cap);
+    ASSERT(p->str != NULL, "malloc ax_parser.str");
+    memset(p->str, 0xff, p->cap); // try to prevent silent failure
 }
 
 void ax__parser_free(struct ax_parser* p)
 {
     free(p->str);
+}
+
+static void ax_push_char(struct ax_parser* p, char ch)
+{
+    if (p->len + 1 >= p->cap) {
+        p->cap *= 2;
+        p->str = realloc(p->str, p->cap);
+        ASSERT(p->str != NULL, "realloc ax_parser.str");
+    }
+    p->str[p->len++] = ch;
+}
+
+static void ax_nul_terminate(struct ax_parser* p)
+{
+    p->str[p->len] = '\0';
 }
 
 
@@ -96,6 +111,7 @@ static enum ax_parse ax_end_state(struct ax_parser* p)
         return AX_PARSE_INTEGER;
     case S_SYMBOL:
         p->state = S_NOTHING;
+        ax_nul_terminate(p);
         return AX_PARSE_SYMBOL;
     case S_QUOTE_STRING:
         return ax_unmatch_quote_err(p);
@@ -132,9 +148,7 @@ static inline enum ax_parse ax_sym1(struct ax_parser* p, char ch)
 {
     ASSERT(ax__char_class(ch) & C_SYM1_MASK, "should be SYM1");
     ASSERT(p->state == S_SYMBOL, "should be in SYMBOL state");
-    ASSERT(p->len + 1 < p->cap, "symbol too big!");
-    p->str[p->len++] = ch;
-    p->str[p->len] = '\0';
+    ax_push_char(p, ch);
     return AX_PARSE_NOTHING;
 }
 
@@ -144,9 +158,8 @@ static inline enum ax_parse ax_sym0(struct ax_parser* p, char ch)
     switch (p->state) {
     case S_NOTHING:
         p->state = S_SYMBOL;
-        p->len = 1;
-        p->str[0] = ch;
-        p->str[1] = '\0';
+        p->len = 0;
+        ax_push_char(p, ch);
         return AX_PARSE_NOTHING;
 
     case S_SYMBOL:
@@ -189,7 +202,6 @@ static enum ax_parse ax_quote(struct ax_parser* p)
 {
     p->state = S_QUOTE_STRING;
     p->len = 0;
-    p->str[0] = '\0';
     return AX_PARSE_NOTHING;
 }
 
@@ -198,11 +210,10 @@ static enum ax_parse ax_quoted_char(struct ax_parser* p, char ch)
     ASSERT(p->state == S_QUOTE_STRING, "should be in QUOTE_STRING state");
     if (ch == '\"') {
         p->state = S_NOTHING;
+        ax_nul_terminate(p);
         return AX_PARSE_STRING;
     } else {
-        ASSERT(p->len + 1 < p->cap, "string too big!");
-        p->str[p->len++] = ch;
-        p->str[p->len] = '\0';
+        ax_push_char(p, ch);
         return AX_PARSE_NOTHING;
     }
 }
@@ -228,6 +239,7 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
             case C_RPAREN: r = ax_rparen(p); break;
             case C_DECIMAL: r = ax_decimal(p, ch); break;
             case C_QUOTE: r = ax_quote(p); break;
+            case C_HASH: NOT_IMPL();
             default:
                 if (cc & C_SYM0_MASK) {
                     r = ax_sym0(p, ch);

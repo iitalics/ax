@@ -119,6 +119,10 @@ TEST(sexp_3s)
 TEST(sexp_sym_with_digits)
 { CHECK_SEXP("foo bar123 baz", "{s:foo,s:bar123,s:baz}"); }
 
+TEST(sexp_sym_weird)
+{ CHECK_SEXP("(foo_bar-23-baz_) _hello w-orld",
+             "{l:1,s:foo_bar-23-baz_,r:0,s:_hello,s:w-orld}"); }
+
 TEST(sexp_2S_quoted)
 { CHECK_SEXP("\"hello\" \"world\"", "{S:hello,S:world}"); }
 
@@ -126,3 +130,35 @@ TEST(sexp_nested)
 { CHECK_SEXP("foo (bar (123 \"baz\") (45) ( )x) ",
              "{s:foo,l:1,s:bar,l:2,i:123,S:baz,r:1,"
              "l:2,i:45,r:1,l:2,r:1,s:x,r:0}"); }
+
+#define BIG_LENGTH 100
+
+TEST(sexp_long_sym)
+{
+    char inp[BIG_LENGTH + 1];
+    char out[BIG_LENGTH + 5];
+    memset(inp, 'A', BIG_LENGTH);
+    inp[BIG_LENGTH] = '\0';
+    sprintf(out, "{s:");
+    memset(out + 3, 'A', BIG_LENGTH);
+    out[BIG_LENGTH + 3] = '}';
+    out[BIG_LENGTH + 4] = '\0';
+    CHECK_SEXP(inp, out);
+}
+
+TEST(sexp_long_str)
+{
+    char inp[BIG_LENGTH + 3];
+    char out[BIG_LENGTH + 5];
+    inp[0] = '"';
+    memset(inp + 1, 'A', BIG_LENGTH);
+    inp[BIG_LENGTH + 1] = '"';
+    inp[BIG_LENGTH + 2] = '\0';
+    sprintf(out, "{S:");
+    memset(out + 3, 'A', BIG_LENGTH);
+    out[BIG_LENGTH + 3] = '}';
+    out[BIG_LENGTH + 4] = '\0';
+    CHECK_SEXP(inp, out);
+}
+
+#undef BIG_LENGTH
