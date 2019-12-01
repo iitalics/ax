@@ -24,6 +24,8 @@ clean:
 	test -d _build && rm -rf _build
 	rm -f ax_test ax_sdl_test
 
+rebuild: clean all
+
 ax_sdl_test: ${c_sdl_test_srcs} ${c_objs}
 	${cc} ${c_sdl_test_flags} ${c_objs} ${c_sdl_test_srcs} -o $@
 
@@ -50,4 +52,13 @@ _build/tests.inc: ${c_test_srcs}
 	@mkdir -p _build
 	${py3} scripts/find_tests.py test $@
 
-.PHONY: all clean run_test run_sdl_test
+.PHONY: all clean rebuild run_test run_sdl_test
+
+
+c: clean
+
+re: rebuild
+
+t: run_test
+
+.PHONY: c re t
