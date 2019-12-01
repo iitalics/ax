@@ -63,6 +63,7 @@ static char* sexp_readout(const char* input)
         switch (r) {
         case AX_PARSE_NOTHING: break;
         case AX_PARSE_INTEGER: out += sprintf(out, "i:%ld,", p.i); break;
+        case AX_PARSE_DOUBLE: out += sprintf(out, "d:%.2f,", p.d); break;
         case AX_PARSE_LPAREN: out += sprintf(out, "l:%zu,", p.paren_depth); break;
         case AX_PARSE_RPAREN: out += sprintf(out, "r:%zu,", p.paren_depth); break;
         case AX_PARSE_SYMBOL: out += sprintf(out, "s:%s,", p.str); break;
@@ -110,6 +111,11 @@ TEST(sexp_err_unmatch_quote)
 TEST(sexp_err_bad_int)
 { CHECK_SEXP("123a", "{e:invalid character `a'}"); }
 
+TEST(sexp_err_bad_dot)
+{ CHECK_SEXP("1.3.5 foo.bar",
+             "{e:invalid character `.',i:5,"
+             "e:invalid character `.',s:bar}"); }
+
 TEST(sexp_2i)
 { CHECK_SEXP("123 456", "{i:123,i:456}"); }
 
@@ -124,11 +130,18 @@ TEST(sexp_sym_weird)
              "{l:1,s:foo_bar-23-baz_,r:0,s:_hello,s:w-orld}"); }
 
 TEST(sexp_2S_quoted)
-{ CHECK_SEXP("\"hello\" \"world\"", "{S:hello,S:world}"); }
+{ CHECK_SEXP("\"hello\" \"world.\"", "{S:hello,S:world.}"); }
+
+TEST(sexp_empty_S)
+{ CHECK_SEXP("\"\"", "{S:}"); }
+
+TEST(sexp_5d)
+{ CHECK_SEXP("24.5 0.728 1000. 000.00 4802.463",
+             "{d:24.50,d:0.73,d:1000.00,d:0.00,d:4802.46}"); }
 
 TEST(sexp_nested)
-{ CHECK_SEXP("foo (bar (123 \"baz\") (45) ( )x) ",
-             "{s:foo,l:1,s:bar,l:2,i:123,S:baz,r:1,"
+{ CHECK_SEXP("foo (bar (123 5.6 \"baz\") (45) ( )x) ",
+             "{s:foo,l:1,s:bar,l:2,i:123,d:5.60,S:baz,r:1,"
              "l:2,i:45,r:1,l:2,r:1,s:x,r:0}"); }
 
 #define BIG_LENGTH 100

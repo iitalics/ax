@@ -11,13 +11,13 @@
  *      | '(' SEXP* ')'
  *
  * NUM = DEC+             integer (decimal)
- *     | DEC+.DEC+        double (decimal)
- *     | '#d' HEX{8}      double (hex encoded)
+ *     | DEC+.DEC*        double (decimal)
+ *     | '#d' HEX{8}      double (hex encoded)        TODO
  *
  * SYM = SYM0 SYM1*
  *
  * STR = '"' [^"]* '"'    string (quoted)
- *     | '#s' (HEX HEX)*  string (hex encoded)
+ *     | '#s' (HEX HEX)*  string (hex encoded)        TODO
  *
  * DEC = [0-9]
  * HEX = [0-9a-fA-F]
@@ -31,6 +31,7 @@ enum ax_parse {
     AX_PARSE_LPAREN,
     AX_PARSE_RPAREN,
     AX_PARSE_INTEGER,
+    AX_PARSE_DOUBLE,
     AX_PARSE_SYMBOL,
     AX_PARSE_STRING,
     AX_PARSE__MAX,
@@ -52,6 +53,8 @@ struct ax_parser {
     enum ax_parse_error err;
 
     long i;
+    double d;
+    long dec_pt_mag;
 };
 
 

@@ -18,6 +18,7 @@ enum char_class {
     C_ALPHA      = 0x0700 | 4,
     C_HEXALPHA   = 0x0800 | 8,
     C_OTHERSYM   = 0x0900 | 16,
+    C_DOT        = 0x1000 | 32,
 };
 
 extern enum char_class ax__char_class(char c);

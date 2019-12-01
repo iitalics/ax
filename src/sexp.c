@@ -8,6 +8,7 @@ enum state {
     S_INTEGER,
     S_SYMBOL,
     S_QUOTE_STRING,
+    S_DOUBLE_DECPT,
     S__MAX,
 };
 
@@ -54,6 +55,7 @@ enum char_class ax__char_class(char c)
     case '-': case '_': return C_OTHERSYM;
     case '#': return C_HASH;
     case '"': return C_QUOTE;
+    case '.': return C_DOT;
     default:
         if (c >= '0' && c <= '9') {
             return C_DECIMAL;
@@ -109,6 +111,10 @@ static enum ax_parse ax_end_state(struct ax_parser* p)
     case S_INTEGER:
         p->state = S_NOTHING;
         return AX_PARSE_INTEGER;
+    case S_DOUBLE_DECPT:
+        p->state = S_NOTHING;
+        p->d += p->i / (double) p->dec_pt_mag;
+        return AX_PARSE_DOUBLE;
     case S_SYMBOL:
         p->state = S_NOTHING;
         ax_nul_terminate(p);
@@ -185,6 +191,8 @@ static enum ax_parse ax_decimal(struct ax_parser* p, char ch)
         p->i = digit(ch);
         return AX_PARSE_NOTHING;
 
+    case S_DOUBLE_DECPT:
+        p->dec_pt_mag *= 10;
     case S_INTEGER:
         p->i = p->i * 10 + digit(ch);
         return AX_PARSE_NOTHING;
@@ -218,6 +226,26 @@ static enum ax_parse ax_quoted_char(struct ax_parser* p, char ch)
     }
 }
 
+static enum ax_parse ax_dot(struct ax_parser* p)
+{
+    switch (p->state) {
+    case S_INTEGER:
+        p->state = S_DOUBLE_DECPT;
+        p->d = (double) p->i;
+        p->i = 0;
+        p->dec_pt_mag = 1;
+        return AX_PARSE_NOTHING;
+
+    case S_NOTHING:
+    case S_SYMBOL:
+    case S_DOUBLE_DECPT:
+        return ax_bad_char_err(p, '.');
+
+    case S_QUOTE_STRING: ASSERT(0, "should not be reachable");
+    default: NO_SUCH_STATE();
+    }
+}
+
 enum ax_parse ax__parser_feed(struct ax_parser* p,
                               char const* chars,
                               char** out_chars)
@@ -239,6 +267,7 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
             case C_RPAREN: r = ax_rparen(p); break;
             case C_DECIMAL: r = ax_decimal(p, ch); break;
             case C_QUOTE: r = ax_quote(p); break;
+            case C_DOT: r = ax_dot(p); break;
             case C_HASH: NOT_IMPL();
             default:
                 if (cc & C_SYM0_MASK) {
