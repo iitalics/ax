@@ -17,8 +17,6 @@ struct ax_aabb { struct ax_pos o; struct ax_dim s; };
 #define AX_AABB(_x, _y, _w, _h) \
     ((struct ax_aabb) { .o = AX_POS(_x, _y), .d = AX_DIM(_w, _h) })
 
-struct ax_flex_child_desc;
-
 enum ax_node_type {
     AX_NODE_CONTAINER = 0,
     AX_NODE_RECTANGLE,
@@ -36,14 +34,8 @@ enum ax_justify {
     AX_JUSTIFY__MAX
 };
 
-struct ax_desc_t {
-    ax_color color;
-    char const* text;
-    void* font;
-};
-
 struct ax_desc_c {
-    const struct ax_flex_child_desc* children;
+    const struct ax_desc* children;
     size_t n_children;
     enum ax_justify main_justify;
     enum ax_justify cross_justify;
@@ -55,20 +47,26 @@ struct ax_desc_r {
     struct ax_dim size;
 };
 
+struct ax_desc_t {
+    ax_color color;
+    char const* text;
+    void* font;
+};
+
+struct ax_flex_child_attrs {
+    ax_flex_factor grow;
+    ax_flex_factor shrink;
+    enum ax_justify cross_justify;
+};
+
 struct ax_desc {
     enum ax_node_type ty;
+    struct ax_flex_child_attrs flex_attrs;
     union {
         struct ax_desc_t t;
         struct ax_desc_c c;
         struct ax_desc_r r;
     };
-};
-
-struct ax_flex_child_desc {
-    struct ax_desc desc;
-    ax_flex_factor grow;
-    ax_flex_factor shrink;
-    enum ax_justify cross_justify;
 };
 
 

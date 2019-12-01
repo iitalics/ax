@@ -4,7 +4,6 @@
 #include "../src/ax.h"
 #include "../src/utils.h"
 #include "../src/text.h"
-#include "desc_helpers.h"
 
 ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
 {
@@ -76,21 +75,26 @@ int main(int argc, char** argv)
         goto ttf_error;
     }
 
-    struct ax_flex_child_desc children[5];
+    struct ax_desc children[5];
     for (size_t i = 0; i < LENGTH(children); i++) {
-        int fill = ax__lerp_colors(0xffcc11, // #fc1
+        struct ax_desc d;
+        d.ty = AX_NODE_RECTANGLE;
+        d.flex_attrs.grow = 0;
+        d.flex_attrs.shrink = (i == 0) ? 0 : 1;
+        d.flex_attrs.cross_justify = AX_JUSTIFY_CENTER;
+        d.r.fill = ax__lerp_colors(0xffcc11, // #fc1
                                    0x8822ff, // #82f
                                    i, LENGTH(children));
-        children[i] = (struct ax_flex_child_desc)
-            FLEX_CHILD(
-                0, (i == 0) ? 0 : 1, AX_JUSTIFY_CENTER,
-                RECT(fill, 100 + i * 5, 100 + i * 30));
+        d.r.size = AX_DIM(100.0 + i * 5.0, 100.0 + i * 30.0);
+        children[i] = d;
     }
 
-    struct ax_desc root_desc =
-        ACONT(AX_JUSTIFY_EVENLY,
-              AX_JUSTIFY_BETWEEN,
-              children);
+    struct ax_desc root_desc;
+    root_desc.ty = AX_NODE_CONTAINER;
+    root_desc.c.children = children;
+    root_desc.c.n_children = LENGTH(children);
+    root_desc.c.main_justify = AX_JUSTIFY_EVENLY;
+    root_desc.c.cross_justify = AX_JUSTIFY_BETWEEN;
     root_desc.c.single_line = true;
 
     /*

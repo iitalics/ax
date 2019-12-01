@@ -38,12 +38,12 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->c.single_line = desc->c.single_line;
         node_id prev_id = NULL_ID;
         for (size_t i = 0; i < desc->c.n_children; i++) {
-            struct ax_flex_child_desc flex_child = desc->c.children[i];
-            node_id child_id = ax_build_node(tr, &flex_child.desc);
+            struct ax_flex_child_attrs attrs = desc->c.children[i].flex_attrs;
+            node_id child_id = ax_build_node(tr, &desc->c.children[i]);
             struct ax_node* child = ax_node_by_id(tr, child_id);
-            child->grow_factor = flex_child.grow;
-            child->shrink_factor = flex_child.shrink;
-            child->cross_justify = flex_child.cross_justify;
+            child->grow_factor = attrs.grow;
+            child->shrink_factor = attrs.shrink;
+            child->cross_justify = attrs.cross_justify;
             if (ID_IS_NULL(prev_id)) {
                 ax_node_by_id(tr, id)->first_child_id = child_id;
             } else {
