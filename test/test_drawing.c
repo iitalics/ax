@@ -1,13 +1,12 @@
 #include "helpers.h"
 #include "../src/ax.h"
 #include "../src/utils.h"
-#include "desc_helpers.h"
 
 
 #define D(_idx) d->data[_idx]
 
 
-TEST(color_to_rgb)
+/*TEST(color_to_rgb)
 {
     uint8_t rgb[3];
     memset(rgb, 0, 3);
@@ -21,17 +20,15 @@ TEST(color_to_rgb)
     CHECK_IEQ_HEX(rgb[0], 0x12);
     CHECK_IEQ_HEX(rgb[1], 0x34);
     CHECK_IEQ_HEX(rgb[2], 0x56);
-}
+} */
 
-
-TEST(rgb_to_color)
+/*TEST(rgb_to_color)
 {
     uint8_t rgb[3] = { 0x12, 0x34, 0x56 };
     CHECK_IEQ_HEX(ax_rgb_color(rgb), 0x123456);
-}
+} */
 
-
-TEST(draw_1r)
+/*TEST(draw_1r)
 {
     struct ax_state* s = ax_new_state();
     ax_set_dimensions(s, AX_DIM(200, 200));
@@ -48,10 +45,9 @@ TEST(draw_1r)
     CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(60.0, 80.0));
 
     ax_destroy_state(s);
-}
+} */
 
-
-TEST(draw_3r)
+/*TEST(draw_3r)
 {
     struct ax_state* s = ax_new_state();
     ax_set_dimensions(s, AX_DIM(200, 200));
@@ -66,17 +62,17 @@ TEST(draw_3r)
 
     const struct ax_drawbuf* d = ax_draw(s);
 
-    /*
-     *   +--------------+
-     *   |              |
-     *   |RRRR  GG  BBBB|
-     *   |RRRR      BBBB|
-     *   |RRRR      BBBB|
-     *   |              |
-     *   +--------------+
-     *
-     *   (see `./reference_draw_3r.html`)
-     */
+    //
+    //   +--------------+
+    //   |              |
+    //   |RRRR  GG  BBBB|
+    //   |RRRR      BBBB|
+    //   |RRRR      BBBB|
+    //   |              |
+    //   +--------------+
+    //
+    //   (see `./reference_draw_3r.html`)
+    //
     CHECK_SZEQ(d->len, (size_t) 3);
 
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
@@ -95,10 +91,9 @@ TEST(draw_3r)
     CHECK_DIMEQ(D(2).r.bounds.s, AX_DIM(60.0, 60.0));
 
     ax_destroy_state(s);
-}
+} */
 
-
-TEST(draw_text_1l)
+/*TEST(draw_text_1l)
 {
     ax_length font_size = 10;
     struct ax_state* s = ax_new_state();
@@ -118,9 +113,9 @@ TEST(draw_text_1l)
     CHECK_PEQ(D(0).t.font, &font_size);
 
     ax_destroy_state(s);
-}
+} */
 
-TEST(draw_text_2l)
+/*TEST(draw_text_2l)
 {
     ax_length font_size = 10;
     struct ax_state* s = ax_new_state();
@@ -146,4 +141,4 @@ TEST(draw_text_2l)
     CHECK_PEQ(D(1).t.font, &font_size);
 
     ax_destroy_state(s);
-}
+} */
