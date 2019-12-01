@@ -43,190 +43,86 @@ TEST(sexp_chars)
 }
 
 
-TEST(sexp_empty)
+static char* sexp_readout(const char* input)
 {
+    char const* const inp_end = input + strlen(input);
+    char* inp = (char*) input;
+    char* const out_start = malloc(4096);
+    char* out = out_start;
+    out += sprintf(out, "{");
     struct ax_parser p;
+    enum ax_parse r;
     ax__parser_init(&p);
-    CHECK_IEQ(ax__parser_eof(&p), AX_PARSE_NOTHING);
+    for (bool end = false; !end; ) {
+        if (inp >= inp_end) {
+            end = true;
+            r = ax__parser_eof(&p);
+        } else {
+            r = ax__parser_feed(&p, inp, &inp);
+        }
+        switch (r) {
+        case AX_PARSE_NOTHING: break;
+        case AX_PARSE_INTEGER: out += sprintf(out, "i:%ld,", p.i); break;
+        case AX_PARSE_LPAREN: out += sprintf(out, "l:%zu,", p.paren_depth); break;
+        case AX_PARSE_RPAREN: out += sprintf(out, "r:%zu,", p.paren_depth); break;
+        case AX_PARSE_SYMBOL: out += sprintf(out, "s:%s,", p.str); break;
+        case AX_PARSE_STRING: out += sprintf(out, "S:%s,", p.str); break;
+        case AX_PARSE_ERROR: out += sprintf(out, "e:%s,", p.str); break;
+        default: NO_SUCH_TAG("ax_parse");
+        }
+    }
+    if (out == out_start + 1) {
+        sprintf(out, "}");
+    } else {
+        sprintf(out - 1, "}");
+    }
     ax__parser_free(&p);
+    return out_start;
 }
+
+#define CHECK_SEXP(_inp, _out) do {             \
+        char* _ch_out = sexp_readout(_inp);     \
+        CHECK_STREQ(_ch_out, _out);             \
+        free(_ch_out); } while(0)
+
+
+TEST(sexp_empty)
+{ CHECK_SEXP("", "{}"); }
 
 TEST(sexp_parens_simple)
-{
-    struct ax_parser p;
-    ax__parser_init(&p);
-    CHECK_IEQ(ax__parser_feedc(&p, '('), AX_PARSE_LPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 1);
-    CHECK_IEQ(ax__parser_feedc(&p, '('), AX_PARSE_LPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 2);
-    CHECK_IEQ(ax__parser_feedc(&p, ')'), AX_PARSE_RPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 1);
-    CHECK_IEQ(ax__parser_feedc(&p, ')'), AX_PARSE_RPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 0);
-    CHECK_IEQ(ax__parser_eof(&p), AX_PARSE_NOTHING);
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("(())", "{l:1,l:2,r:1,r:0}"); }
 
 TEST(sexp_parens_spaces)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    r = ax__parser_feedc(&p, '('); CHECK_IEQ(r, AX_PARSE_LPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 1);
-    r = ax__parser_feedc(&p, '('); CHECK_IEQ(r, AX_PARSE_LPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 2);
-    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
-
-    char s[] = " \n)";
-    char* a;
-    r = ax__parser_feed(&p, s, &a); CHECK_IEQ(r, AX_PARSE_RPAREN);
-    CHECK_PEQ(a, &s[3]);
-    CHECK_SZEQ(p.paren_depth, (size_t) 1);
-
-    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    r = ax__parser_feedc(&p, ')'); CHECK_IEQ(r, AX_PARSE_RPAREN);
-    CHECK_SZEQ(p.paren_depth, (size_t) 0);
-    r = ax__parser_feedc(&p, '\t'); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    r = ax__parser_feedc(&p, ' '); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    r = ax__parser_eof(&p); CHECK_BEQ(r, AX_PARSE_NOTHING);
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("((  \n) )  ", "{l:1,l:2,r:1,r:0}"); }
 
 TEST(sexp_err_bad_char)
-{
-    struct ax_parser p;
-    ax__parser_init(&p);
-    CHECK_IEQ(ax__parser_feedc(&p, '$'), AX_PARSE_ERROR);
-    CHECK_IEQ(p.err, AX_PARSE_ERROR_BAD_CHAR);
-    CHECK_STREQ(p.str, "invalid character `$'");
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("$", "{e:invalid character `$'}"); }
 
 TEST(sexp_err_extra_rparen)
-{
-    struct ax_parser p;
-    ax__parser_init(&p);
-    ax__parser_feedc(&p, '(');
-    ax__parser_feedc(&p, ' ');
-    ax__parser_feedc(&p, ')');
-    enum ax_parse r = ax__parser_feedc(&p, ')');
-    CHECK_IEQ(r, AX_PARSE_ERROR);
-    CHECK_IEQ(p.err, AX_PARSE_ERROR_EXTRA_RPAREN);
-    CHECK_STREQ(p.str, "unexpected `)'");
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("( ))", "{l:1,r:0,e:unexpected `)'}"); }
 
 TEST(sexp_err_unmatch_lparen)
-{
-    struct ax_parser p;
-    ax__parser_init(&p);
-    ax__parser_feedc(&p, '(');
-    ax__parser_feedc(&p, ' ');
-    ax__parser_feedc(&p, '(');
-    ax__parser_feedc(&p, ')');
-    enum ax_parse r = ax__parser_eof(&p);
-    CHECK_IEQ(r, AX_PARSE_ERROR);
-    CHECK_IEQ(p.err, AX_PARSE_ERROR_UNMATCH_LPAREN);
-    CHECK_STREQ(p.str, "unmatched `('");
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("( ()", "{l:1,l:2,r:1,e:unmatched `('}"); }
+
+TEST(sexp_err_unmatch_quote)
+{ CHECK_SEXP("\"hi\" \"world", "{S:hi,e:unmatched \"}"); }
 
 TEST(sexp_err_bad_int)
-{
-    struct ax_parser p;
-    ax__parser_init(&p);
-    enum ax_parse r = ax__parser_feed(&p, "123a", NULL);
-    CHECK_IEQ(r, AX_PARSE_ERROR);
-    CHECK_IEQ(p.err, AX_PARSE_ERROR_BAD_CHAR);
-    CHECK_STREQ(p.str, "invalid character `a'");
-    ax__parser_free(&p);
-}
-
-TEST(sexp_1i)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    char s[] = "123";
-    char* a = s;
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    CHECK_PEQ(a, &s[3]);
-    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_INTEGER);
-    CHECK_LEQ(p.i, (long) 123);
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("123a", "{e:invalid character `a'}"); }
 
 TEST(sexp_2i)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    char s[] = "123 456";
-    char* a = s;
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_INTEGER);
-    CHECK_PEQ(a, &s[3]);
-    CHECK_LEQ(p.i, (long) 123);
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    CHECK_PEQ(a, &s[7]);
-    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_INTEGER);
-    CHECK_LEQ(p.i, (long) 456);
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("123 456", "{i:123,i:456}"); }
 
 TEST(sexp_3s)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    char s[] = "foo bar baz";
-    char* a = s;
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_PEQ(a, &s[3]);
-    CHECK_STREQ(p.str, "foo");
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_PEQ(a, &s[7]);
-    CHECK_STREQ(p.str, "bar");
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    CHECK_PEQ(a, &s[11]);
-    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_STREQ(p.str, "baz");
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("foo bar baz", "{s:foo,s:bar,s:baz}"); }
 
 TEST(sexp_sym_with_digits)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    char s[] = "foo bar123 baz";
-    char* a = s;
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_PEQ(a, &s[3]);
-    CHECK_STREQ(p.str, "foo");
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_PEQ(a, &s[10]);
-    CHECK_STREQ(p.str, "bar123");
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    CHECK_PEQ(a, &s[14]);
-    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_SYMBOL);
-    CHECK_STREQ(p.str, "baz");
-    ax__parser_free(&p);
-}
+{ CHECK_SEXP("foo bar123 baz", "{s:foo,s:bar123,s:baz}"); }
 
-TEST(sexp_2S)
-{
-    struct ax_parser p;
-    enum ax_parse r;
-    ax__parser_init(&p);
-    char s[] = "\"hello\" \"world\"";
-    char* a = s;
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_STRING);
-    CHECK_PEQ(a, &s[7]);
-    CHECK_STREQ(p.str, "hello");
-    r = ax__parser_feed(&p, a, &a); CHECK_IEQ(r, AX_PARSE_STRING);
-    CHECK_PEQ(a, &s[15]);
-    CHECK_STREQ(p.str, "world");
-    r = ax__parser_eof(&p); CHECK_IEQ(r, AX_PARSE_NOTHING);
-    ax__parser_free(&p);
-}
+TEST(sexp_2S_quoted)
+{ CHECK_SEXP("\"hello\" \"world\"", "{S:hello,S:world}"); }
+
+TEST(sexp_nested)
+{ CHECK_SEXP("foo (bar (123 \"baz\") (45) ( )x) ",
+             "{s:foo,l:1,s:bar,l:2,i:123,S:baz,r:1,"
+             "l:2,i:45,r:1,l:2,r:1,s:x,r:0}"); }

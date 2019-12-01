@@ -63,9 +63,3 @@ extern enum ax_parse ax__parser_feed(struct ax_parser* p,
                                      char** out_chars);
 
 extern enum ax_parse ax__parser_eof(struct ax_parser* p);
-
-static inline enum ax_parse ax__parser_feedc(struct ax_parser* p, char c)
-{
-    char s[2] = { c, '\0' };
-    return ax__parser_feed(p, s, NULL);
-}
