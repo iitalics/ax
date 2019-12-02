@@ -160,13 +160,9 @@
 (struct tk:non-rp token [] #:transparent)
 (struct tk:sym token [name] #:transparent)
 
-(struct dom [state tok] #:transparent)
+(struct action [token next-state func] #:transparent)
 
-(struct action [] #:transparent)
-(struct ac:do action [func ac-rest] #:transparent)
-(struct ac:goto action [state] #:transparent)
-
-;; [hash dom => action]
+;; [hash state => [listof action]
 (define current-transitions (make-parameter #f))
 
 (define (call/transitions f)
@@ -176,15 +172,17 @@
 (define-syntax-rule (with-transitions body ...)
   (call/transitions (λ () body ...)))
 
-(define (add-transition! s tok ac [ts (current-transitions)])
-  (hash-set! ts (dom s tok) ac))
+;; state action -> void
+(define (add-transition! s δ [ts (current-transitions)])
+  (hash-update! ts s
+                (λ (δs) (cons δ δs))
+                (λ () '())))
 
-(define (cg:action ac s->code)
-  (match ac
-    [(ac:do f ac*) (f) (cg:action ac* s->code)]
-    [(ac:goto s) (cg:set-state s s->code) (cg:ok)]))
+(define (cg:goto-state s s->code)
+  (cg:set-state s s->code)
+  (cg:ok))
 
-(define (cg:token-case tk=>f df)
+(define (cg:token-case tk tk=>f df)
   (define v=>f (make-hash))
   (define sym=>f (make-hash))
   (for ([(tk f) (in-hash tk=>f)])
@@ -203,7 +201,7 @@
         (printf "}\n"))
       (df))
     (hash-set! v=>f cgv:token-sym f*))
-  (cg:case cgv:the-token v=>f df))
+  (cg:case tk v=>f df))
 
 ;; ts state -> void
 (define (cg:transitions s0 [ts (current-transitions)])
@@ -212,23 +210,16 @@
     (hash-ref! s=>code s
                (λ ()
                  (hash-count s=>code))))
-  (define s=>tok=>ac (make-hash))
-  (for ([(d ac) (in-hash ts)])
-    (match-define (dom s tok) d)
-    (hash-update! s=>tok=>ac s
-                  (λ (tok=>ac)
-                    (hash-set tok=>ac tok ac))
-                  make-immutable-hash))
   (define code=>f
-    (for/hash ([(s tok=>ac) (in-hash s=>tok=>ac)])
-      (define (f)
-        (cg:token-case (for/hash ([(tok ac) (in-hash tok=>ac)])
-                         (values tok (λ () (cg:action ac s->code))))
-                       cg:tok-error))
-      (values (s->code s) f)))
-  (cg:case cgv:the-state
-           code=>f
-           cg:impossible-state-error)
+    (for/hash ([(s acs) (in-hash ts)]
+               #:when (andmap action? acs))
+      (define tok=>f
+        (for/hash ([ac (in-list acs)])
+          (match-define (action tk s* f) ac)
+          (values tk (λ () (f) (cg:goto-state s* s->code)))))
+      (values (s->code s)
+              (λ () (cg:token-case cgv:the-token tok=>f cg:tok-error)))))
+  (cg:case cgv:the-state code=>f cg:impossible-state-error)
   (eprintf "* Generated transition table with ~a states\n"
            (hash-count s=>code)))
 
@@ -243,18 +234,18 @@
   (for ([tm (in-set rhs)]
         #:when (terminal? tm))
     (add-transition! s0
-                     (terminal-token tm)
-                     (ac:do (λ () ((terminal-action tm)
-                                   (terminal-value tm)))
-                            (ac:goto s1))))
+                     (action (terminal-token tm)
+                             s1
+                             (λ () ((terminal-action tm)
+                                    (terminal-value tm))))))
 
   (unless (hash-empty? lists)
     (define s-head (gensym 's))
-    (add-transition! s0 (tk:lp) (ac:goto s-head))
+    (add-transition! s0 (action (tk:lp) s-head void))
     (for ([(hd pd) (in-hash lists)])
       (match-define (pd:list _ args rep? before after) pd)
       (define s-tail (gensym 's))
-      (add-transition! s-head (tk:sym hd) (ac:do before (ac:goto s-tail)))
+      (add-transition! s-head (action (tk:sym hd) s-tail before))
       (compile-list rules args rep? s-tail s1 after))))
 
 (define (terminal-token tm)
@@ -285,8 +276,7 @@
                      s-here
                      s-next))
 
-  (add-transition! (last s-nexts) (tk:rp)
-                   (ac:do after (ac:goto s1))))
+  (add-transition! (last s-nexts) (action (tk:rp) s1 after)))
 
 ;; rules -> state
 (define (compile-rules rules)
