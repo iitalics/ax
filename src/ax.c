@@ -139,7 +139,8 @@ static struct ax_desc const empty_node_desc = {
 
 static void ax_interp_init(struct ax_interp* it);
 static void ax_interp_free(struct ax_interp* it);
-static int ax_interp(struct ax_interp* it,
+static int ax_interp(struct ax_state* s,
+                     struct ax_interp* it,
                      struct ax_parser* pr, enum ax_parse p);
 
 struct ax_state* ax_new_state()
@@ -223,7 +224,7 @@ int ax_read_chunk(struct ax_state* s, const char* input)
     while (acc < end) {
         enum ax_parse p = ax__parser_feed(&s->parser, acc, &acc);
         if (p != AX_PARSE_NOTHING) {
-            int r = ax_interp(&s->interp, &s->parser, p);
+            int r = ax_interp(s, &s->interp, &s->parser, p);
             if (r != 0) {
                 return r;
             }
@@ -235,19 +236,56 @@ int ax_read_chunk(struct ax_state* s, const char* input)
 int ax_read_end(struct ax_state* s)
 {
     enum ax_parse p = ax__parser_eof(&s->parser);
-    return ax_interp(&s->interp, &s->parser, p);
+    return ax_interp(s, &s->interp, &s->parser, p);
 }
 
+
+enum ax_interp_mode {
+    M_NONE = 0,
+    M_LOG,
+    M_DIM_W,
+    M_DIM_H,
+    M__MAX,
+};
 
 static void ax_interp_init(struct ax_interp* it)
 {
     it->state = 0;
+    it->mode = M_NONE;
     it->err_msg = NULL;
 }
 
 static void ax_interp_free(struct ax_interp* it)
 {
     free(it->err_msg);
+}
+
+static void ax_interp_begin_log(struct ax_interp* it) { it->mode = M_LOG; }
+static void ax_interp_begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
+
+static void ax_interp_text(struct ax_interp* it, const char* str)
+{
+    switch (it->mode) {
+    case M_LOG:
+        printf("[LOG] %s\n", str);
+        break;
+    default: break;
+    }
+}
+
+static void ax_interp_integer_len(struct ax_interp* it, long v)
+{
+    switch (it->mode) {
+    case M_DIM_W:
+        it->dim.w = v;
+        it->mode = M_DIM_H;
+        break;
+    case M_DIM_H:
+        it->dim.h = v;
+        it->mode = M_NONE;
+        break;
+    default: break;
+    }
 }
 
 static int ax_interp_generic_err(struct ax_interp* it)
@@ -275,12 +313,8 @@ static int ax_interp_parse_err(struct ax_interp* it, struct ax_parser* pr)
 #undef FMT
 }
 
-static void ax_interp_log(const char* str)
-{
-    printf("[LOG] %s\n", str);
-}
-
-static int ax_interp(struct ax_interp* it,
+static int ax_interp(struct ax_state* s,
+                     struct ax_interp* it,
                      struct ax_parser* pr, enum ax_parse p)
 {
     if (it->err_msg != NULL) {

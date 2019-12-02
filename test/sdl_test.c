@@ -117,6 +117,10 @@ int main(int argc, char** argv)
     ax_set_dimensions(ax, AX_DIM(width, height));
     ax_set_root(ax, &root_desc);
 
+    if (ax_read(ax, "(set-dim 800 400)") != 0) {
+        goto ax_error;
+    }
+
     if (ax_read(ax, "(log \"Hello, world\")") != 0) {
         goto ax_error;
     }

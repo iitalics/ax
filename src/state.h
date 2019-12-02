@@ -5,7 +5,12 @@
 
 struct ax_interp {
     int state;
+    int mode;
     char* err_msg;
+
+    union {
+        struct ax_dim dim;
+    };
 };
 
 struct ax_state {
