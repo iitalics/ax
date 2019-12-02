@@ -114,16 +114,11 @@ int main(int argc, char** argv)
     };
 
     ax = ax_new_state();
-    ax_set_dimensions(ax, AX_DIM(width, height));
-    ax_set_root(ax, &root_desc);
-
-    if (ax_read(ax, "(set-dim 800 400)") != 0) {
-        goto ax_error;
-    }
-
     if (ax_read(ax, "(log \"Hello, world\")") != 0) {
         goto ax_error;
     }
+
+    ax_set_root(ax, &root_desc);
 
     for (;;) {
         SDL_Event ev;
@@ -150,7 +145,10 @@ int main(int argc, char** argv)
 
         int win_w, win_h;
         SDL_GetWindowSize(win, &win_w, &win_h);
-        ax_set_dimensions(ax, AX_DIM(win_w, win_h));
+
+        char set_dim_msg[128];
+        sprintf(set_dim_msg, "(set-dim %d %d)", win_w, win_h);
+        if (ax_read(ax, set_dim_msg) != 0) { goto ax_error; }
 
         const struct ax_drawbuf* draw = ax_draw(ax);
         for (size_t i = 0; i < draw->len; i++) {
