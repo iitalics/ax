@@ -140,7 +140,7 @@ static struct ax_desc const empty_node_desc = {
 static void ax_interp_init(struct ax_interp* it);
 static void ax_interp_free(struct ax_interp* it);
 static int ax_interp(struct ax_interp* it,
-                     struct ax_parser* ps, enum ax_parse p);
+                     struct ax_parser* pr, enum ax_parse p);
 
 struct ax_state* ax_new_state()
 {
@@ -201,8 +201,11 @@ const struct ax_drawbuf* ax_draw(struct ax_state* s)
 
 const char* ax_get_error(struct ax_state* s)
 {
-    (void) s;
-    return "";
+    if (s->interp.err_msg != NULL) {
+        return s->interp.err_msg;
+    } else {
+        return "(no error)";
+    }
 }
 
 
@@ -219,9 +222,11 @@ int ax_read_chunk(struct ax_state* s, const char* input)
     char const* end = input + strlen(input);
     while (acc < end) {
         enum ax_parse p = ax__parser_feed(&s->parser, acc, &acc);
-        int r = ax_interp(&s->interp, &s->parser, p);
-        if (r != 0) {
-            return r;
+        if (p != AX_PARSE_NOTHING) {
+            int r = ax_interp(&s->interp, &s->parser, p);
+            if (r != 0) {
+                return r;
+            }
         }
     }
     return 0;
@@ -235,25 +240,113 @@ int ax_read_end(struct ax_state* s)
 
 
 enum {
-    R_TOPLEVEL = 0,
-    R__MAX,
+    R_ERROR = 0,
+
+    R_TOPLEVEL = 0x100,
+    R_TOPLEVEL_1,
+
+    R_LOG = 0x0200,
+    R_LOG_1,
 };
 
 static void ax_interp_init(struct ax_interp* it)
 {
     it->state = R_TOPLEVEL;
+    it->err_msg = NULL;
 }
 
 static void ax_interp_free(struct ax_interp* it)
 {
-    (void) it;
+    free(it->err_msg);
+}
+
+static int ax_interp_generic_err(struct ax_interp* it)
+{
+    const char* ctx;
+    switch (it->state) {
+    case R_TOPLEVEL: ctx = "toplevel command"; break;
+    case R_TOPLEVEL_1: ctx = "toplevel command name"; break;
+    case R_LOG: ctx = "string"; break;
+    case R_LOG_1: ctx = "end of list"; break;
+    default: ctx = "???";
+    }
+#define FMT "invalid syntax, expected %s"
+    size_t len = strlen(FMT) - 2 + strlen(ctx);
+    it->err_msg = malloc(len + 1);
+    sprintf(it->err_msg, FMT, ctx);
+    it->state = R_ERROR;
+    return 1;
+#undef FMT
+}
+
+static int ax_interp_parse_err(struct ax_interp* it, struct ax_parser* pr)
+{
+#define FMT "parse erorr: %s"
+    size_t len = strlen(FMT) - 2 + strlen(pr->str);
+    it->err_msg = malloc(len + 1);
+    sprintf(it->err_msg, FMT, pr->str);
+    it->state = R_ERROR;
+    return 1;
+#undef FMT
+}
+
+static void ax_interp_log(const char* str)
+{
+    printf("[LOG] %s\n", str);
 }
 
 static int ax_interp(struct ax_interp* it,
-                     struct ax_parser* ps, enum ax_parse p)
+                     struct ax_parser* pr, enum ax_parse p)
 {
-    (void) it;
-    (void) ps;
-    (void) p;
-    NOT_IMPL();
+    if (it->state == R_ERROR) {
+        return 1;
+    }
+    if (p == AX_PARSE_NOTHING) {
+        return 0;
+    }
+    if (p == AX_PARSE_ERROR) {
+        return ax_interp_parse_err(it, pr);
+    }
+
+    switch (it->state) {
+    case R_ERROR:
+        return 1;
+
+    case R_TOPLEVEL:
+        switch (p) {
+        case AX_PARSE_LPAREN:
+            it->state = R_TOPLEVEL_1;
+            return 0;
+        default: return ax_interp_generic_err(it);
+        }
+
+    case R_TOPLEVEL_1:
+        switch (p) {
+        case AX_PARSE_SYMBOL:
+            if (strcmp(pr->str, "log") == 0) {
+                it->state = R_LOG;
+                return 0;
+            }
+        default: return ax_interp_generic_err(it);
+        }
+
+    case R_LOG:
+        switch (p) {
+        case AX_PARSE_STRING:
+            ax_interp_log(pr->str);
+            it->state = R_LOG_1;
+            return 0;
+        default: return ax_interp_generic_err(it);
+        }
+
+    case R_LOG_1:
+        switch (p) {
+        case AX_PARSE_RPAREN:
+            it->state = R_TOPLEVEL;
+            return 0;
+        default: return ax_interp_generic_err(it);
+        }
+
+    default: NO_SUCH_TAG("ax_interp.state");
+    }
 }

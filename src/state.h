@@ -5,6 +5,7 @@
 
 struct ax_interp {
     int state;
+    char* err_msg;
 };
 
 struct ax_state {
