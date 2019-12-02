@@ -142,6 +142,14 @@
   (df)
   (printf "}\n"))
 
+(define (cg:push-ctx c [denote values])
+  (printf "ax_interp_push(it, ~a);\n" (denote c)))
+(define (cg:if-pop-ctx c f [denote values])
+  (printf "if (it->ctx == ~a) {\n" (denote c))
+  (printf "ax_interp_pop(it);\n")
+  (f)
+  (printf "}\n"))
+
 ;; ====================
 
 (struct token [] #:transparent)

@@ -252,6 +252,9 @@ enum ax_interp_mode {
 static void ax_interp_init(struct ax_interp* it)
 {
     it->state = 0;
+    it->ctx = -1;
+    it->ctx_sp = 0;
+
     it->mode = M_NONE;
     it->err_msg = NULL;
     it->desc = NULL;
@@ -267,6 +270,32 @@ static void ax_interp_free(struct ax_interp* it)
 {
     ax_interp_reset_node(it);
     free(it->err_msg);
+}
+
+static void ax_interp_log_stack(struct ax_interp* it)
+{
+    printf("[LOG] stack: ");
+    for (size_t i = 0; i < it->ctx_sp; i++) {
+        printf("%d, ", it->ctx_stack[i]);
+    }
+    printf("%d\n", it->ctx);
+}
+
+static void ax_interp_push(struct ax_interp* it, int new_ctx)
+{
+    ASSERT(it->ctx_sp < LENGTH(it->ctx_stack), "stack overflow");
+    it->ctx_stack[it->ctx_sp++] = it->ctx;
+    it->ctx = new_ctx;
+    printf("[LOG] push %d\n", new_ctx);
+    ax_interp_log_stack(it);
+}
+
+static void ax_interp_pop(struct ax_interp* it)
+{
+    ASSERT(it->ctx_sp > 0, "stack underflow");
+    it->ctx = it->ctx_stack[--it->ctx_sp];
+    printf("[LOG] pop\n");
+    ax_interp_log_stack(it);
 }
 
 static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
