@@ -6,7 +6,7 @@
 #define D(_idx) d->data[_idx]
 
 
-/*TEST(color_to_rgb)
+TEST(color_to_rgb)
 {
     uint8_t rgb[3];
     memset(rgb, 0, 3);
@@ -20,21 +20,21 @@
     CHECK_IEQ_HEX(rgb[0], 0x12);
     CHECK_IEQ_HEX(rgb[1], 0x34);
     CHECK_IEQ_HEX(rgb[2], 0x56);
-} */
+}
 
-/*TEST(rgb_to_color)
+TEST(rgb_to_color)
 {
     uint8_t rgb[3] = { 0x12, 0x34, 0x56 };
     CHECK_IEQ_HEX(ax_rgb_color(rgb), 0x123456);
-} */
+}
 
-/*TEST(draw_1r)
+TEST(draw_1r)
 {
     struct ax_state* s = ax_new_state();
-    ax_set_dimensions(s, AX_DIM(200, 200));
-    ax_set_root(
-        s,
-        &(struct ax_desc) RECT(0xff0033, 60, 80));
+    ax_read(s,
+            "(set-dim 200 200)"
+            "(set-root (rect (fill \"ff0033\")"
+            "                (size 60 80)))");
 
     const struct ax_drawbuf* d = ax_draw(s);
 
@@ -45,7 +45,7 @@
     CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(60.0, 80.0));
 
     ax_destroy_state(s);
-} */
+}
 
 /*TEST(draw_3r)
 {
