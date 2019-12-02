@@ -157,7 +157,6 @@
 (struct action [] #:transparent)
 (struct ac:do action [func ac-rest] #:transparent)
 (struct ac:goto action [state] #:transparent)
-(struct ac:retry action [state] #:transparent)
 
 ;; [hash dom => action]
 (define current-transitions (make-parameter #f))
@@ -172,11 +171,10 @@
 (define (add-transition! s tok ac [ts (current-transitions)])
   (hash-set! ts (dom s tok) ac))
 
-(define (cg:action ac s->code retry-l)
+(define (cg:action ac s->code)
   (match ac
-    [(ac:do f ac*) (f) (cg:action ac* s->code retry-l)]
-    [(ac:goto s) (cg:set-state s s->code) (cg:ok)]
-    [(ac:retry s) (cg:set-state s s->code) (cg:goto retry-l)]))
+    [(ac:do f ac*) (f) (cg:action ac* s->code)]
+    [(ac:goto s) (cg:set-state s s->code) (cg:ok)]))
 
 (define (cg:token-case tk=>f df)
   (define v=>f (make-hash))
@@ -213,20 +211,18 @@
                   (λ (tok=>ac)
                     (hash-set tok=>ac tok ac))
                   make-immutable-hash))
-  (define retry-l (gensym 'retry))
   (define code=>f
     (for/hash ([(s tok=>ac) (in-hash s=>tok=>ac)])
       (define (f)
         (cg:token-case (for/hash ([(tok ac) (in-hash tok=>ac)])
-                         (values tok
-                                 (λ ()
-                                   (cg:action ac s->code retry-l))))
+                         (values tok (λ () (cg:action ac s->code))))
                        cg:tok-error))
       (values (s->code s) f)))
-  (cg:label retry-l)
   (cg:case cgv:the-state
            code=>f
-           cg:impossible-state-error))
+           cg:impossible-state-error)
+  (eprintf "* Generated transition table with ~a states\n"
+           (hash-count s=>code)))
 
 ;; rules nonterm state state -> void
 (define (compile-nonterm rules nt s0 s1)
@@ -266,22 +262,23 @@
 ;; rules [listof nt-sym] boolean state state cgf -> void
 (define (compile-list rules args rep-last? s0 s1 [after void])
   (define n-args (length args))
-  (define s-tos (build-list n-args (λ (i) (gensym 'sI))))
-  (define s-froms (cons s0 s-tos))
+  (define s-nexts
+    (for/fold ([s-prev s0] [ss '()] #:result (reverse ss))
+              ([i (in-range n-args)])
+      (if (and rep-last? (= i (sub1 n-args)))
+          (values s-prev (cons s-prev ss)) ; loop instead of going to new state
+          (let ([s* (gensym 'sI)]) (values s* (cons s* ss))))))
 
   (for ([arg-name (in-list args)]
-        [s-from (in-list s-froms)]
-        [s-to (in-list s-tos)])
+        [s-here (in-list (cons s0 s-nexts))]
+        [s-next (in-list s-nexts)])
     (compile-nonterm rules
                      (lookup-nonterm rules arg-name)
-                     s-from
-                     s-to))
+                     s-here
+                     s-next))
 
-  (define s* (last s-tos))
-  (add-transition! s* (tk:rp) (ac:do after (ac:goto s1)))
-  (when (and rep-last? (positive? n-args))
-    (define s** (list-ref s-froms (sub1 n-args)))
-    (add-transition! s* #f (ac:retry s**))))
+  (add-transition! (last s-nexts) (tk:rp)
+                   (ac:do after (ac:goto s1))))
 
 ;; rules -> state
 (define (compile-rules rules)
