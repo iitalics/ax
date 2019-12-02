@@ -1,15 +1,11 @@
-#lang racket/base
+#lang racket
 (provide
  (rename-out
   [module-begin #%module-begin]))
 
 (require
- syntax/parse
- racket/string
- racket/set
- racket/match
- racket/port
- (for-syntax racket/base))
+ syntax/parse)
+
 
 (struct produc [] #:transparent)
 
@@ -20,8 +16,9 @@
 
 ;; head : symbol
 ;; args : [listof symbol]
+;; rep? : boolean
 ;; before, after : [cgv -> void]
-(struct pd:list produc [head args before after] #:transparent)
+(struct pd:list produc [head args rep? before after] #:transparent)
 
 ;; name : nt-sym
 ;; prods : [listof (or prod nt-sym)]
@@ -55,11 +52,13 @@
            #:attr pd ((attribute t.ctor) cgf)]
   [pattern name:NONTERM-NAME
            #:attr pd (attribute name.sym)]
-  [pattern {~seq (head:id arg:NONTERM-NAME ...)
+  [pattern {~seq (head:id arg:NONTERM-NAME ...
+                          {~optional {~and ooo {~datum ...}}})
                  {~optional {~seq #:before bef:str}}
                  {~optional {~seq #:after aft:str}}}
            #:attr pd (pd:list (syntax-e #'head)
                               (attribute arg.sym)
+                              (and (attribute ooo) #t)
                               (if (attribute bef)
                                   (op->function (syntax-e #'bef))
                                   void)
@@ -124,17 +123,14 @@
       (λ es (apply printf stmt es))
       (λ es (display stmt))))
 
-(define (cg:ok)
-  (displayln "return 0;"))
+(define ((cg:seq . fs)) (for ([f (in-list fs)]) (f)))
 
-(define (cg:tok-error)
-  (displayln "return ax_interp_generic_err(it);"))
-
-(define (cg:impossible-state-error)
-  (displayln "NO_SUCH_TAG(\"ax_interp.state\");"))
-
-(define (cg:set-state s [denote values])
-  (printf "it->state = ~a;\n" (denote s)))
+(define (cg:ok) (displayln "return 0;"))
+(define (cg:tok-error) (displayln "return ax_interp_generic_err(it);"))
+(define (cg:impossible-state-error) (displayln "NO_SUCH_TAG(\"ax_interp.state\");"))
+(define (cg:set-state s [denote values]) (printf "it->state = ~a;\n" (denote s)))
+(define (cg:label l) (printf "~a:" l))
+(define (cg:goto l) (printf "goto ~a;" l))
 
 ;; cgv [hash cgv => cgf] cgf -> void
 (define (cg:case v i=>f df)
@@ -148,26 +144,40 @@
 
 ;; ====================
 
-(struct action [] #:transparent)
-(struct ac:do action [func ac-rest] #:transparent)
-(struct ac:goto action [state] #:transparent)
-
 (struct token [] #:transparent)
 (struct tk:lp token [] #:transparent)
 (struct tk:rp token [] #:transparent)
 (struct tk:str token [] #:transparent)
 (struct tk:int token [] #:transparent)
+(struct tk:non-rp token [] #:transparent)
 (struct tk:sym token [name] #:transparent)
 
 (struct dom [state tok] #:transparent)
 
-(define (add-transition! ts s tok ac)
+(struct action [] #:transparent)
+(struct ac:do action [func ac-rest] #:transparent)
+(struct ac:goto action [state] #:transparent)
+(struct ac:retry action [state] #:transparent)
+
+;; [hash dom => action]
+(define current-transitions (make-parameter #f))
+
+(define (call/transitions f)
+  (let ([ts (make-hash)])
+    (parameterize ([current-transitions ts]) (f))
+    ts))
+(define-syntax-rule (with-transitions body ...)
+  (call/transitions (λ () body ...)))
+
+(define (add-transition! s tok ac [ts (current-transitions)])
   (hash-set! ts (dom s tok) ac))
 
-(define (cg:action ac s->code)
+(define (cg:action ac s->code retry-l)
   (match ac
-    [(ac:do f ac*) (f) (cg:action ac* s->code)]
-    [(ac:goto s) (cg:set-state s s->code)]))
+    [(ac:do f ac*) (f) (cg:action ac* s->code retry-l)]
+    [(ac:goto s) (cg:set-state s s->code)]
+    [(ac:retry s) (cg:seq (cg:set-state s s->code)
+                          (cg:goto retry-l))]))
 
 (define (cg:token-case tk=>f df)
   (define v=>f (make-hash))
@@ -178,6 +188,9 @@
       [(tk:rp) (hash-set! v=>f cgv:token-rp f)]
       [(tk:str) (hash-set! v=>f cgv:token-str f)]
       [(tk:int) (hash-set! v=>f cgv:token-int f)]
+      [(tk:non-rp)
+       (for ([v (in-list (list cgv:token-lp cgv:token-str cgv:token-int))])
+         (hash-set! v=>f v f))]
       [(tk:sym s) (hash-set! sym=>f s f)]))
   (unless (hash-empty? sym=>f)
     (define (f*)
@@ -190,7 +203,7 @@
   (cg:case cgv:the-token v=>f df))
 
 ;; ts state -> void
-(define (cg:transitions ts s0)
+(define (cg:transitions #:init s0 [ts (current-transitions)])
   (define s=>code (make-hash (list (cons s0 0))))
   (define (s->code s)
     (hash-ref! s=>code s
@@ -203,64 +216,78 @@
                   (λ (tok=>ac)
                     (hash-set tok=>ac tok ac))
                   make-immutable-hash))
+  (define retry-l (gensym 'retry))
+  (define code=>f
+    (for/hash ([(s tok=>ac) (in-hash s=>tok=>ac)])
+      (define (f)
+        (cg:token-case (for/hash ([(tok ac) (in-hash tok=>ac)])
+                         (values tok
+                                 (λ ()
+                                   (cg:action ac s->code retry-l)
+                                   (cg:ok))))
+                       cg:tok-error))
+      (values (s->code s) f)))
+  (cg:label retry-l)
   (cg:case cgv:the-state
-           (for/hash ([(s tok=>ac) (in-hash s=>tok=>ac)])
-             (define (f)
-               (cg:token-case (for/hash ([(tok ac) (in-hash tok=>ac)])
-                                (values tok
-                                        (λ ()
-                                          (cg:action ac s->code)
-                                          (cg:ok))))
-                              cg:tok-error))
-             (values (s->code s) f))
+           code=>f
            cg:impossible-state-error))
 
-;; transitions rules nt-sym state state -> void
-(define (compile-nonterm/name ts rules nt-sym s0 s1)
-  (compile-nonterm ts rules (lookup-nonterm rules nt-sym) s0 s1))
+;; rules nt-sym state state -> void
+(define (compile-nonterm/name rules nt-sym s0 s1)
+  (compile-nonterm rules (lookup-nonterm rules nt-sym) s0 s1))
 
-;; transitions rules nonterm state state -> void
-(define (compile-nonterm ts rules nt s0 s1)
+;; rules nonterm state state -> void
+(define (compile-nonterm rules nt s0 s1)
   (define lists (make-hash))
 
   (for ([pd (in-set (nonterm-rhs nt rules))])
     (match pd
       [(pd:str op)
-       (add-transition! ts s0 (tk:str)
+       (add-transition! s0 (tk:str)
                         (ac:do (λ () (op cgv:str-value))
                                (ac:goto s1)))]
       [(pd:int op)
-       (add-transition! ts s0 (tk:int)
+       (add-transition! s0 (tk:int)
                         (ac:do (λ () (op cgv:int-value))
                                (ac:goto s1)))]
 
-      [(pd:list hd _ _ _)
+      [(pd:list hd _ _ _ _)
        (hash-set! lists hd pd)]))
 
   (unless (hash-empty? lists)
     (define s-head (gensym 's))
-    (add-transition! ts s0 (tk:lp) (ac:goto s-head))
+    (add-transition! s0 (tk:lp) (ac:goto s-head))
     (for ([(hd pd) (in-hash lists)])
-      (match-define (pd:list _ args before after) pd)
+      (match-define (pd:list _ args rep? before after) pd)
       (define s-tail (gensym 's))
-      (add-transition! ts s-head (tk:sym hd) (ac:do before (ac:goto s-tail)))
-      (compile-list ts rules args s-tail s1 after))))
+      (add-transition! s-head (tk:sym hd) (ac:do before (ac:goto s-tail)))
+      (compile-list rules args rep? s-tail s1 after))))
 
-;; transitions rules [listof nt-sym] state state cgf -> void
-(define (compile-list ts rules args s0 s1 [after void])
-  (define s* (for/fold ([s s0]) ([arg (in-list args)])
-               (let ([s* (gensym 's)])
-                 (compile-nonterm/name ts rules arg s s*)
-                 s*)))
-  (add-transition! ts s* (tk:rp) (ac:do after (ac:goto s1))))
+;; transitions rules [listof nt-sym] boolean state state cgf -> void
+(define (compile-list rules args rep-last? s0 s1 [after void])
+
+  (define n-args (length args))
+  (define s-tos (build-list n-args (λ (i) (gensym 'sI))))
+  (define s-froms (cons s0 s-tos))
+
+  (for ([arg (in-list args)]
+        [s-from (in-list s-froms)]
+        [s-to (in-list s-tos)])
+    (compile-nonterm/name rules arg s-from s-to))
+
+  (define s* (last s-tos))
+  (when rep-last?
+    (define s** (list-ref s-froms (sub1 n-args)))
+    (add-transition! s* (tk:non-rp) (ac:retry s**)))
+  (add-transition! s* (tk:rp) (ac:do after (ac:goto s1))))
 
 ;; ====================
 
 (define (compile+cg-rules rules)
-  (define s0 (gensym 's))
-  (define ts (make-hash))
-  (compile-nonterm ts rules (rules-start rules) s0 s0)
-  (cg:transitions ts s0))
+  (with-transitions
+    (define s0 (gensym 's))
+    (compile-nonterm rules (rules-start rules) s0 s0)
+    (cg:transitions #:init s0)))
 
 (define-syntax (module-begin stx)
   (syntax-case stx ()
