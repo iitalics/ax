@@ -245,6 +245,7 @@ enum ax_interp_mode {
     M_LOG,
     M_DIM_W,
     M_DIM_H,
+    M_FILL,
     M__MAX,
 };
 
@@ -306,12 +307,17 @@ static void ax_interp_set_rect_size(struct ax_interp* it)
 
 static void ax_interp_begin_log(struct ax_interp* it) { it->mode = M_LOG; }
 static void ax_interp_begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
+static void ax_interp_begin_fill(struct ax_interp* it) { it->mode = M_FILL; }
 
-static void ax_interp_text(struct ax_interp* it, const char* str)
+static void ax_interp_string(struct ax_interp* it, const char* str)
 {
     switch (it->mode) {
     case M_LOG:
         printf("[LOG] %s\n", str);
+        break;
+    case M_FILL:
+        printf("[LOG] fill: %s\n", str);
+        it->desc->r.fill = strtol(str, NULL, 16);
         break;
     default: break;
     }

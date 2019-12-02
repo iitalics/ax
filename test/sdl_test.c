@@ -118,12 +118,15 @@ int main(int argc, char** argv)
         goto ax_error;
     }
 
-    if (ax_read(ax, "(set-root (rect (size 300 200)))") != 0) {
+    if (ax_read(ax,
+                "(set-root"
+                "  (rect (fill \"ff7700\")"
+                "        (size 300 200)))"
+            ) != 0) {
         goto ax_error;
     }
 
     //ax_set_root(ax, &root_desc);
-
 
     for (;;) {
         SDL_Event ev;
