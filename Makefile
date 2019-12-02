@@ -4,6 +4,7 @@ c_objs = $(c_srcs:src/%=_build/%.o)
 gen = _build/parser_rules.inc
 
 cc = gcc
+cpp = ${cc} -E
 c_flags = -Wall -std=c99 -g
 
 c_sdl_test_srcs  = test/sdl_test.c
@@ -45,8 +46,11 @@ TAGS: ${tags_srcs}
 _build:
 	mkdir _build
 
+include $(wildcard _build/*.dep)
+
 _build/%.c.o: src/%.c
 	@mkdir -p _build
+	@${cpp} -MQ $@ -MM $< -o $(<:src/%.c=_build/%.c.dep)
 	${cc} ${c_flags} -c -o $@ $<
 
 _build/tests.inc: ${c_test_srcs}
