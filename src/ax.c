@@ -253,11 +253,55 @@ static void ax_interp_init(struct ax_interp* it)
     it->state = 0;
     it->mode = M_NONE;
     it->err_msg = NULL;
+    it->desc = NULL;
+}
+
+static void ax_interp_reset_node(struct ax_interp* it)
+{
+    // TODO: free it->desc
+    it->desc = NULL;
 }
 
 static void ax_interp_free(struct ax_interp* it)
 {
+    ax_interp_reset_node(it);
     free(it->err_msg);
+}
+
+static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
+{
+    struct ax_desc* desc = malloc(sizeof(struct ax_desc));
+    ASSERT(desc != NULL, "malloc ax_desc");
+    // TODO: better way to make a default initialized node desc
+    desc->ty = ty;
+    switch (ty) {
+    case AX_NODE_CONTAINER:
+        desc->c.first_child = NULL;
+        break;
+    case AX_NODE_RECTANGLE:
+        desc->r.fill = 0x000000;
+        desc->r.size = AX_DIM(0.0, 0.0);
+        break;
+    case AX_NODE_TEXT:
+        desc->t.text = "";
+        desc->t.font = NULL;
+        break;
+    default: NO_SUCH_NODE_TAG();
+    }
+    desc->flex_attrs.next_child = NULL;
+    desc->parent = it->desc;
+    it->desc = desc;
+}
+
+static void ax_interp_set_root(struct ax_state* s, struct ax_interp* it)
+{
+    ax_set_root(s, it->desc);
+    ax_interp_reset_node(it);
+}
+
+static void ax_interp_set_rect_size(struct ax_interp* it)
+{
+    it->desc->r.size = it->dim;
 }
 
 static void ax_interp_begin_log(struct ax_interp* it) { it->mode = M_LOG; }
@@ -283,6 +327,7 @@ static void ax_interp_integer_len(struct ax_interp* it, long v)
     case M_DIM_H:
         it->dim.h = v;
         it->mode = M_NONE;
+        printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
         break;
     default: break;
     }
