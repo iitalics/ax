@@ -239,19 +239,9 @@ int ax_read_end(struct ax_state* s)
 }
 
 
-enum {
-    R_ERROR = 0,
-
-    R_TOPLEVEL = 0x100,
-    R_TOPLEVEL_1,
-
-    R_LOG = 0x0200,
-    R_LOG_1,
-};
-
 static void ax_interp_init(struct ax_interp* it)
 {
-    it->state = R_TOPLEVEL;
+    it->state = 0;
     it->err_msg = NULL;
 }
 
@@ -264,17 +254,13 @@ static int ax_interp_generic_err(struct ax_interp* it)
 {
     const char* ctx;
     switch (it->state) {
-    case R_TOPLEVEL: ctx = "toplevel command"; break;
-    case R_TOPLEVEL_1: ctx = "toplevel command name"; break;
-    case R_LOG: ctx = "string"; break;
-    case R_LOG_1: ctx = "end of list"; break;
+        // TODO: generate state names
     default: ctx = "???";
     }
 #define FMT "invalid syntax, expected %s"
     size_t len = strlen(FMT) - 2 + strlen(ctx);
     it->err_msg = malloc(len + 1);
     sprintf(it->err_msg, FMT, ctx);
-    it->state = R_ERROR;
     return 1;
 #undef FMT
 }
@@ -285,7 +271,6 @@ static int ax_interp_parse_err(struct ax_interp* it, struct ax_parser* pr)
     size_t len = strlen(FMT) - 2 + strlen(pr->str);
     it->err_msg = malloc(len + 1);
     sprintf(it->err_msg, FMT, pr->str);
-    it->state = R_ERROR;
     return 1;
 #undef FMT
 }
@@ -298,7 +283,7 @@ static void ax_interp_log(const char* str)
 static int ax_interp(struct ax_interp* it,
                      struct ax_parser* pr, enum ax_parse p)
 {
-    if (it->state == R_ERROR) {
+    if (it->err_msg != NULL) {
         return 1;
     }
     if (p == AX_PARSE_NOTHING) {
@@ -308,45 +293,5 @@ static int ax_interp(struct ax_interp* it,
         return ax_interp_parse_err(it, pr);
     }
 
-    switch (it->state) {
-    case R_ERROR:
-        return 1;
-
-    case R_TOPLEVEL:
-        switch (p) {
-        case AX_PARSE_LPAREN:
-            it->state = R_TOPLEVEL_1;
-            return 0;
-        default: return ax_interp_generic_err(it);
-        }
-
-    case R_TOPLEVEL_1:
-        switch (p) {
-        case AX_PARSE_SYMBOL:
-            if (strcmp(pr->str, "log") == 0) {
-                it->state = R_LOG;
-                return 0;
-            }
-        default: return ax_interp_generic_err(it);
-        }
-
-    case R_LOG:
-        switch (p) {
-        case AX_PARSE_STRING:
-            ax_interp_log(pr->str);
-            it->state = R_LOG_1;
-            return 0;
-        default: return ax_interp_generic_err(it);
-        }
-
-    case R_LOG_1:
-        switch (p) {
-        case AX_PARSE_RPAREN:
-            it->state = R_TOPLEVEL;
-            return 0;
-        default: return ax_interp_generic_err(it);
-        }
-
-    default: NO_SUCH_TAG("ax_interp.state");
-    }
+#include "../_build/parser_rules.inc"
 }
