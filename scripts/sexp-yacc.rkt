@@ -13,14 +13,15 @@
 
 (struct produc [] #:transparent)
 
-;; action : (or #f [cg-expr -> cg-stmt])
+;; action : [cgv -> void]
 (struct pd:term produc [action] #:transparent)
 (struct pd:str pd:term [] #:transparent)
 (struct pd:int pd:term [] #:transparent)
 
 ;; head : symbol
 ;; args : [listof symbol]
-(struct pd:list produc [head args] #:transparent)
+;; before, after : [cgv -> void]
+(struct pd:list produc [head args before after] #:transparent)
 
 ;; name : nt-sym
 ;; prods : [listof (or prod nt-sym)]
@@ -46,7 +47,7 @@
 
 (define-splicing-syntax-class PROD
   #:description "production"
-  [pattern {~seq t:TERMINAL {~optional {~seq #:op op}}}
+  [pattern {~seq t:TERMINAL {~optional {~seq #:op op:str}}}
            #:do [(define cgf
                    (if (attribute op)
                        (op->function (syntax-e #'op))
@@ -54,9 +55,17 @@
            #:attr pd ((attribute t.ctor) cgf)]
   [pattern name:NONTERM-NAME
            #:attr pd (attribute name.sym)]
-  [pattern (head:id arg:NONTERM-NAME ...)
+  [pattern {~seq (head:id arg:NONTERM-NAME ...)
+                 {~optional {~seq #:before bef:str}}
+                 {~optional {~seq #:after aft:str}}}
            #:attr pd (pd:list (syntax-e #'head)
-                              (attribute arg.sym))])
+                              (attribute arg.sym)
+                              (if (attribute bef)
+                                  (op->function (syntax-e #'bef))
+                                  void)
+                              (if (attribute aft)
+                                  (op->function (syntax-e #'aft))
+                                  void))])
 
 (define-syntax-class NONTERM
   #:description "nonterminal"
@@ -206,6 +215,10 @@
              (values (s->code s) f))
            cg:impossible-state-error))
 
+;; transitions rules nt-sym state state -> void
+(define (compile-nonterm/name ts rules nt-sym s0 s1)
+  (compile-nonterm ts rules (lookup-nonterm rules nt-sym) s0 s1))
+
 ;; transitions rules nonterm state state -> void
 (define (compile-nonterm ts rules nt s0 s1)
   (define lists (make-hash))
@@ -216,30 +229,30 @@
        (add-transition! ts s0 (tk:str)
                         (ac:do (λ () (op cgv:str-value))
                                (ac:goto s1)))]
+      [(pd:int op)
+       (add-transition! ts s0 (tk:int)
+                        (ac:do (λ () (op cgv:int-value))
+                               (ac:goto s1)))]
 
-      [(pd:list hd _)
+      [(pd:list hd _ _ _)
        (hash-set! lists hd pd)]))
 
   (unless (hash-empty? lists)
     (define s-head (gensym 's))
     (add-transition! ts s0 (tk:lp) (ac:goto s-head))
     (for ([(hd pd) (in-hash lists)])
-      (match-define (pd:list _ args) pd)
+      (match-define (pd:list _ args before after) pd)
       (define s-tail (gensym 's))
-      (add-transition! ts s-head (tk:sym hd) (ac:goto s-tail))
-      (compile-list ts rules args s-tail s1))))
+      (add-transition! ts s-head (tk:sym hd) (ac:do before (ac:goto s-tail)))
+      (compile-list ts rules args s-tail s1 after))))
 
-;; transitions rules nt-sym state state -> void
-(define (compile-nonterm/name ts rules nt-sym s0 s1)
-  (compile-nonterm ts rules (lookup-nonterm rules nt-sym) s0 s1))
-
-;; transitions rules [listof nt-sym] state state -> void
-(define (compile-list ts rules args s0 s1)
+;; transitions rules [listof nt-sym] state state cgf -> void
+(define (compile-list ts rules args s0 s1 [after void])
   (define s* (for/fold ([s s0]) ([arg (in-list args)])
                (let ([s* (gensym 's)])
                  (compile-nonterm/name ts rules arg s s*)
                  s*)))
-  (add-transition! ts s* (tk:rp) (ac:goto s1)))
+  (add-transition! ts s* (tk:rp) (ac:do after (ac:goto s1))))
 
 ;; ====================
 
