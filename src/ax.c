@@ -405,6 +405,19 @@ static void ax_interp_begin_text(struct ax_interp* it) { it->mode = M_TEXT; }
 static void ax_interp_begin_font(struct ax_interp* it) { it->mode = M_FONT; }
 static void ax_interp_begin_text_color(struct ax_interp* it) { it->mode = M_TEXT_COLOR; }
 
+static void ax_interp_color(struct ax_interp* it, ax_color col)
+{
+    switch (it->mode) {
+    case M_FILL:
+        it->desc->r.fill = col;
+        break;
+    case M_TEXT_COLOR:
+        it->desc->t.color = col;
+        break;
+    default: break;
+    }
+}
+
 static void ax_interp_string(struct ax_interp* it, const char* str)
 {
     switch (it->mode) {
@@ -456,20 +469,6 @@ static void ax_interp_justify(struct ax_interp* it, enum ax_justify just)
         break;
     case M_SELF_JUSTIFY:
         it->desc->flex_attrs.cross_justify = just;
-        break;
-    default: break;
-    }
-}
-
-static void ax_interp_color(struct ax_interp* it, ax_color col)
-{
-    switch (it->mode) {
-    case M_FILL:
-        it->desc->r.fill = col;
-        break;
-    case M_TEXT_COLOR:
-        it->desc->t.color = col;
-        break;
         break;
     default: break;
     }
