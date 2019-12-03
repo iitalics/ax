@@ -33,35 +33,28 @@ TEST(draw_1r)
     struct ax_state* s = ax_new_state();
     ax_read(s,
             "(set-dim 200 200)"
-            "(set-root (rect (fill \"ff0033\")"
-            "                (size 60 80)))");
+            "(set-root (rect (fill \"ff0033\") (size 60 80)))");
 
     const struct ax_drawbuf* d = ax_draw(s);
-
     CHECK_SZEQ(d->len, (size_t) 1);
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ(D(0).r.fill, 0xff0033);
     CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 0.0));
     CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(60.0, 80.0));
-
     ax_destroy_state(s);
 }
 
-/*TEST(draw_3r)
+TEST(draw_3r)
 {
     struct ax_state* s = ax_new_state();
-    ax_set_dimensions(s, AX_DIM(200, 200));
-    ax_set_root(
-        s,
-        &(struct ax_desc)
-        CONT(AX_JUSTIFY_BETWEEN, AX_JUSTIFY_CENTER,
-             FLEX_CHILD(0, 1, AX_JUSTIFY_START, RECT(0xff0000, 60, 60)),
-             FLEX_CHILD(0, 1, AX_JUSTIFY_START, RECT(0x00ff00, 20, 20)),
-             FLEX_CHILD(0, 1, AX_JUSTIFY_START, RECT(0x0000ff, 60, 60)))
-        );
-
-    const struct ax_drawbuf* d = ax_draw(s);
-
+    ax_read(s,
+            "(set-dim 200 200)"
+            "(set-root"
+            " (container (children (rect (fill \"ff0000\") (size 60 60))"
+            "                      (rect (fill \"00ff00\") (size 20 20))"
+            "                      (rect (fill \"0000ff\") (size 60 60)))"
+            "            (main-justify between)"
+            "            (cross-justify center)))");
     //
     //   +--------------+
     //   |              |
@@ -73,25 +66,22 @@ TEST(draw_1r)
     //
     //   (see `./reference_draw_3r.html`)
     //
+    const struct ax_drawbuf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 3);
-
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ_HEX(D(0).r.fill, 0xff0000);
     CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 70.0));
     CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(60.0, 60.0));
-
     CHECK_IEQ(D(1).ty, AX_DRAW_RECT);
     CHECK_IEQ_HEX(D(1).r.fill, 0x00ff00);
     CHECK_POSEQ(D(1).r.bounds.o, AX_POS(90.0, 70.0));
     CHECK_DIMEQ(D(1).r.bounds.s, AX_DIM(20.0, 20.0));
-
     CHECK_IEQ(D(2).ty, AX_DRAW_RECT);
     CHECK_IEQ_HEX(D(2).r.fill, 0x0000ff);
     CHECK_POSEQ(D(2).r.bounds.o, AX_POS(140.0, 70.0));
     CHECK_DIMEQ(D(2).r.bounds.s, AX_DIM(60.0, 60.0));
-
     ax_destroy_state(s);
-} */
+}
 
 /*TEST(draw_text_1l)
 {
