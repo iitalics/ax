@@ -411,12 +411,6 @@ static void ax_interp_string(struct ax_interp* it, const char* str)
     case M_LOG:
         printf("[LOG] %s\n", str);
         break;
-    case M_FILL:
-        it->desc->r.fill = strtol(str, NULL, 16);
-        break;
-    case M_TEXT_COLOR:
-        it->desc->t.color = strtol(str, NULL, 16);
-        break;
     case M_TEXT:
         it->desc->t.text = malloc(strlen(str) + 1);
         strcpy((char*) it->desc->t.text, str);
@@ -467,17 +461,24 @@ static void ax_interp_justify(struct ax_interp* it, enum ax_justify just)
     }
 }
 
-static void ax_interp_no_color(struct ax_interp* it)
+static void ax_interp_color(struct ax_interp* it, ax_color col)
 {
     switch (it->mode) {
     case M_FILL:
-        it->desc->r.fill = AX_NULL_COLOR;
+        it->desc->r.fill = col;
         break;
     case M_TEXT_COLOR:
-        it->desc->t.color = AX_NULL_COLOR;
+        it->desc->t.color = col;
+        break;
         break;
     default: break;
     }
+}
+
+static void ax_interp_color_string(struct ax_interp* it, const char* str)
+{
+    ax_color col = strtol(str, NULL, 16);
+    ax_interp_color(it, col);
 }
 
 static void ax_interp_single_line(struct ax_interp* it, bool s)
