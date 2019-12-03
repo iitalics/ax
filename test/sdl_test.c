@@ -19,8 +19,16 @@ ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
 SDL_Color ax__sdl_color(ax_color c)
 {
     uint8_t rgb[3];
-    ax_color_rgb(c, rgb);
-    return (SDL_Color) { .a = 0xff, .r = rgb[0], .g = rgb[1], .b = rgb[2] };
+    if (ax_color_rgb(c, rgb)) {
+        return (SDL_Color) {
+            .a = 0xff,
+            .r = rgb[0],
+            .g = rgb[1],
+            .b = rgb[2],
+        };
+    } else {
+        return (SDL_Color) { .a = 0 };
+    }
 }
 
 
@@ -71,12 +79,19 @@ static int build_example(struct ax_state* ax, size_t n)
     s += sprintf(s, "(set-root (container (children");
     for (size_t i = 0; i < n; i++) {
         s += sprintf(s,
-                     "(rect (fill \"%06x\")"
-                     "      (size %zu %zu)"
-                     "      (shrink %d))",
-                     ax__lerp_colors(0xffcc11, 0x8822ff, i, n),
+                     "(rect (size %zu %zu)"
+                     "      (shrink %d)",
                      100 + i * 5, 100 + i * 30,
                      i == 0 ? 0 : 1);
+
+        if (i == 1) {
+            s += sprintf(s, "(fill none))");
+        } else {
+            s += sprintf(s,
+                         "(fill \"%06x\"))",
+                         ax__lerp_colors(0xffcc11, 0x8822ff, i, n));
+        }
+
         if (i == 2) {
             s += sprintf(s,
                          "(text \"Hello\""
@@ -112,6 +127,7 @@ int main(int argc, char** argv)
             &win, &rn) != 0) {
         goto sdl_error;
     }
+    SDL_SetRenderDrawBlendMode(rn, SDL_BLENDMODE_BLEND);
 
     if (TTF_Init() != 0) {
         goto ttf_error;

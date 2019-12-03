@@ -44,7 +44,8 @@
 [<str> STR #:op "ax_interp_string(it, ~a);\n"]
 [<int> INT #:op "ax_interp_integer(it, ~a);\n"]
 [<len> <int>]
-[<color> <str>]
+[<color> <str>
+         none #:op "ax_interp_no_color(it);\n"]
 
 [<justify> start #:op "ax_interp_justify(it, AX_JUSTIFY_START);\n"
            end #:op "ax_interp_justify(it, AX_JUSTIFY_END);\n"

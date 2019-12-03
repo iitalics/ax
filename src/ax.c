@@ -467,6 +467,19 @@ static void ax_interp_justify(struct ax_interp* it, enum ax_justify just)
     }
 }
 
+static void ax_interp_no_color(struct ax_interp* it)
+{
+    switch (it->mode) {
+    case M_FILL:
+        it->desc->r.fill = AX_NULL_COLOR;
+        break;
+    case M_TEXT_COLOR:
+        it->desc->t.color = AX_NULL_COLOR;
+        break;
+    default: break;
+    }
+}
+
 static void ax_interp_single_line(struct ax_interp* it, bool s)
 {
     it->desc->c.single_line = s;
