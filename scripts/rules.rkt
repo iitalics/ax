@@ -29,6 +29,7 @@
 
 [<c-attr> (main-justify <justify>) #:before "ax_interp_begin_main_justify(it);\n"
           (cross-justify <justify>) #:before "ax_interp_begin_cross_justify(it);\n"
+          (background <color>) #:before "ax_interp_begin_background(it);\n"
           single-line #:op "ax_interp_single_line(it, true);\n"
           multi-line #:op "ax_interp_single_line(it, false);\n"
           <flex-attr>]

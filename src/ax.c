@@ -49,6 +49,7 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         node->c.main_justify = desc->c.main_justify;
         node->c.cross_justify = desc->c.cross_justify;
         node->c.single_line = desc->c.single_line;
+        node->c.background = desc->c.background;
         node_id prev_id = NULL_ID;
         for (const struct ax_desc* child_desc = desc->c.first_child;
              child_desc != NULL;
@@ -266,6 +267,7 @@ enum ax_interp_mode {
     M_FONT,
     M_FILL,
     M_TEXT_COLOR,
+    M_BACKGROUND,
     M_DIM_W,
     M_DIM_H,
     M_MAIN_JUSTIFY,
@@ -341,6 +343,7 @@ static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
             .main_justify = AX_JUSTIFY_START,
             .cross_justify = AX_JUSTIFY_START,
             .single_line = false,
+            .background = AX_NULL_COLOR,
         };
         break;
     case AX_NODE_RECTANGLE:
@@ -405,6 +408,7 @@ static void ax_interp_begin_text(struct ax_interp* it) { it->mode = M_TEXT; }
 static void ax_interp_begin_font(struct ax_interp* it) { it->mode = M_FONT; }
 static void ax_interp_begin_text_color(struct ax_interp* it) { it->mode = M_TEXT_COLOR; }
 static void ax_interp_begin_rgb(struct ax_interp* it) { it->col.rgb_idx = 0; }
+static void ax_interp_begin_background(struct ax_interp* it) { it->mode = M_BACKGROUND; }
 
 static void ax_interp_color(struct ax_interp* it, ax_color col)
 {
@@ -414,6 +418,9 @@ static void ax_interp_color(struct ax_interp* it, ax_color col)
         break;
     case M_TEXT_COLOR:
         it->desc->t.color = col;
+        break;
+    case M_BACKGROUND:
+        it->desc->c.background = col;
         break;
     default: break;
     }
@@ -458,6 +465,7 @@ static void ax_interp_integer(struct ax_interp* it, long v)
 
     case M_FILL:
     case M_TEXT_COLOR:
+    case M_BACKGROUND:
         // (rgb ...) form
         it->col.rgb[it->col.rgb_idx++] = v < 0 ? 0 : v > 255 ? 255 : v;
         if (it->col.rgb_idx >= 3) {

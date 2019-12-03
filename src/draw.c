@@ -34,6 +34,13 @@ static void ax_redraw_(struct ax_node* node, struct ax_drawbuf* db)
 {
     switch (node->ty) {
     case AX_NODE_CONTAINER:
+        if (!AX_COLOR_IS_NULL(node->c.background)) {
+            struct ax_draw* d = ax_drawbuf_ins(db);
+            d->ty = AX_DRAW_RECT;
+            d->r.fill = node->c.background;
+            d->r.bounds.o = node->coord;
+            d->r.bounds.s = node->target;
+        }
         break;
 
     case AX_NODE_RECTANGLE: {

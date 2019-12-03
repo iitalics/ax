@@ -14,6 +14,7 @@ struct ax_node_c {
     enum ax_justify main_justify;
     enum ax_justify cross_justify;
     bool single_line;
+    ax_color background;
 };
 
 struct ax_node_t {
