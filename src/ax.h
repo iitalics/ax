@@ -12,6 +12,9 @@ struct ax_pos { ax_length x, y; };
 struct ax_dim { ax_length w, h; };
 struct ax_aabb { struct ax_pos o; struct ax_dim s; };
 
+#define AX_NULL_COLOR ((ax_color) -1)
+#define AX_COLOR_IS_NULL(_c) ((_c) >= 0x1000000)
+
 #define AX_POS(_x, _y) ((struct ax_pos) { .x = (_x), .y = (_y) })
 #define AX_DIM(_w, _h) ((struct ax_dim) { .w = (_w), .h = (_h) })
 #define AX_AABB(_x, _y, _w, _h) \
@@ -148,6 +151,8 @@ static inline int ax_read(struct ax_state* s, const char* input)
  * Color utilities
  */
 
-extern void ax_color_rgb(ax_color color, uint8_t* out_rgb);
+// returns false if color is invalid
+extern bool ax_color_rgb(ax_color color, uint8_t* out_rgb);
 
+// returns AX_NULL_COLOR if rgb is NULL
 extern ax_color ax_rgb_color(uint8_t* rgb);

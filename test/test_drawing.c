@@ -10,19 +10,20 @@ TEST(color_to_rgb)
 {
     uint8_t rgb[3];
     memset(rgb, 0, 3);
-    ax_color_rgb(0x123456, rgb);
+    CHECK_TRUE(ax_color_rgb(0x123456, rgb));
     CHECK_IEQ_HEX(rgb[0], 0x12);
     CHECK_IEQ_HEX(rgb[1], 0x34);
     CHECK_IEQ_HEX(rgb[2], 0x56);
+    CHECK_TRUE(ax_color_rgb(0xffffff, rgb));
+    CHECK_IEQ_HEX(rgb[0], 0xff);
+    CHECK_IEQ_HEX(rgb[1], 0xff);
+    CHECK_IEQ_HEX(rgb[2], 0xff);
 
-    memset(rgb, 0, 3);
-    ax_color_rgb(0x98123456, rgb);
-    CHECK_IEQ_HEX(rgb[0], 0x12);
-    CHECK_IEQ_HEX(rgb[1], 0x34);
-    CHECK_IEQ_HEX(rgb[2], 0x56);
+    CHECK_FALSE(ax_color_rgb(AX_NULL_COLOR, rgb));
+    CHECK_FALSE(ax_color_rgb(0x8123456, rgb));
 }
 
-TEST(rgb_to_color)
+TEST(color_from_rgb)
 {
     uint8_t rgb[3] = { 0x12, 0x34, 0x56 };
     CHECK_IEQ_HEX(ax_rgb_color(rgb), 0x123456);

@@ -74,16 +74,21 @@ void ax__redraw(struct ax_tree* tr, struct ax_drawbuf* db)
 }
 
 
-void ax_color_rgb(ax_color color, uint8_t* out_rgb)
+bool ax_color_rgb(ax_color color, uint8_t* out_rgb)
 {
     out_rgb[0] = (color & 0xff0000) >> 16;
     out_rgb[1] = (color & 0x00ff00) >> 8;
     out_rgb[2] = (color & 0x0000ff) >> 0;
+    return !AX_COLOR_IS_NULL(color);
 }
 
 ax_color ax_rgb_color(uint8_t* rgb)
 {
-    return (uint32_t) rgb[0] * 0x010000 +
-        (uint32_t) rgb[1] * 0x000100 +
-        (uint32_t) rgb[2];
+    if (rgb == NULL) {
+        return AX_NULL_COLOR;
+    } else {
+        return (uint32_t) rgb[0] * 0x010000 +
+            (uint32_t) rgb[1] * 0x000100 +
+            (uint32_t) rgb[2];
+    }
 }
