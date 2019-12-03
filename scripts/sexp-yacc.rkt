@@ -13,6 +13,7 @@
 (struct terminal produc [action] #:transparent)
 (struct pd:str terminal [] #:transparent)
 (struct pd:int terminal [] #:transparent)
+(struct pd:sym terminal [name] #:transparent)
 
 ;; head : symbol
 ;; args : [listof symbol]
@@ -40,18 +41,11 @@
 (define-splicing-syntax-class TERMINAL
   #:description "terminal"
   [pattern {~datum STR} #:attr ctor pd:str]
-  [pattern {~datum INT} #:attr ctor pd:int])
+  [pattern {~datum INT} #:attr ctor pd:int]
+  [pattern name:id #:attr ctor (λ (f) (pd:sym f (syntax-e #'name)))])
 
 (define-splicing-syntax-class PROD
   #:description "production"
-  [pattern {~seq t:TERMINAL {~optional {~seq #:op op:str}}}
-           #:do [(define cgf
-                   (if (attribute op)
-                       (op->function (syntax-e #'op))
-                       void))]
-           #:attr pd ((attribute t.ctor) cgf)]
-  [pattern name:NONTERM-NAME
-           #:attr pd (attribute name.sym)]
   [pattern {~seq (head:id arg:NONTERM-NAME ...
                           {~optional {~and ooo {~datum ...}}})
                  {~optional {~seq #:before bef:str}}
@@ -64,7 +58,15 @@
                                   void)
                               (if (attribute aft)
                                   (op->function (syntax-e #'aft))
-                                  void))])
+                                  void))]
+  [pattern name:NONTERM-NAME
+           #:attr pd (attribute name.sym)]
+  [pattern {~seq t:TERMINAL {~optional {~seq #:op op:str}}}
+           #:do [(define cgf
+                   (if (attribute op)
+                       (op->function (syntax-e #'op))
+                       void))]
+           #:attr pd ((attribute t.ctor) cgf)])
 
 (define-syntax-class NONTERM
   #:description "nonterminal"
@@ -300,12 +302,14 @@
 (define (terminal-token tm)
   (match tm
     [(pd:str _) (tk:str)]
-    [(pd:int _) (tk:int)]))
+    [(pd:int _) (tk:int)]
+    [(pd:sym _ s) (tk:sym s)]))
 
 (define (terminal-value tm)
   (match tm
     [(pd:str _) cgv:str-value]
-    [(pd:int _) cgv:int-value]))
+    [(pd:int _) cgv:int-value]
+    [(pd:sym _ _) ""]))
 
 ;; returns start state + start state of last arg, given an end state
 ;; ---
