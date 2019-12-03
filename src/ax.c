@@ -19,6 +19,18 @@ static void ax_init_tree(struct ax_tree* tr)
     ASSERT(tr->nodes != NULL, "malloc ax_tree.nodes");
 }
 
+static struct ax_desc* ax_reverse_flex_children(struct ax_desc* init_desc)
+{
+    struct ax_desc* first, *last, *next;
+    for (first = NULL, last = init_desc; last != NULL; last = next)
+    {
+        next = last->flex_attrs.next_child;
+        last->flex_attrs.next_child = first;
+        first = last;
+    }
+    return first;
+}
+
 static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
 {
     // NOT a stack-less traversal :(
@@ -257,13 +269,16 @@ static void ax_interp_init(struct ax_interp* it)
 
     it->mode = M_NONE;
     it->err_msg = NULL;
+
     it->desc = NULL;
+    it->parent_desc = NULL;
 }
 
 static void ax_interp_reset_node(struct ax_interp* it)
 {
-    // TODO: free it->desc
+    // TODO: free it->desc, it->parent_desc
     it->desc = NULL;
+    it->parent_desc = NULL;
 }
 
 static void ax_interp_free(struct ax_interp* it)
@@ -306,20 +321,30 @@ static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
     desc->ty = ty;
     switch (ty) {
     case AX_NODE_CONTAINER:
-        desc->c.first_child = NULL;
+        desc->c = (struct ax_desc_c) {
+            .first_child = NULL,
+            .main_justify = AX_JUSTIFY_START,
+            .cross_justify = AX_JUSTIFY_START,
+            .single_line = false,
+        };
         break;
     case AX_NODE_RECTANGLE:
-        desc->r.fill = 0x000000;
-        desc->r.size = AX_DIM(0.0, 0.0);
+        desc->r = (struct ax_desc_r) {
+            .fill = 0x000000,
+            .size = AX_DIM(0.0, 0.0),
+        };
         break;
     case AX_NODE_TEXT:
-        desc->t.text = "";
-        desc->t.font = NULL;
-        break;
+        NOT_IMPL();
     default: NO_SUCH_NODE_TAG();
     }
-    desc->flex_attrs.next_child = NULL;
-    desc->parent = it->desc;
+    desc->flex_attrs = (struct ax_flex_child_attrs) {
+        .grow = 0,
+        .shrink = 1,
+        .cross_justify = AX_JUSTIFY_START,
+        .next_child = it->desc,
+    };
+    desc->parent = it->parent_desc;
     it->desc = desc;
 }
 
@@ -332,6 +357,20 @@ static void ax_interp_set_root(struct ax_state* s, struct ax_interp* it)
 static void ax_interp_set_rect_size(struct ax_interp* it)
 {
     it->desc->r.size = it->dim;
+}
+
+static void ax_interp_begin_children(struct ax_interp* it)
+{
+    it->parent_desc = it->desc;
+    it->desc = NULL;
+}
+
+static void ax_interp_end_children(struct ax_interp* it)
+{
+    struct ax_desc* parent = it->parent_desc;
+    parent->c.first_child = ax_reverse_flex_children(it->desc);
+    it->parent_desc = parent->parent;
+    it->desc = parent;
 }
 
 static void ax_interp_begin_log(struct ax_interp* it) { it->mode = M_LOG; }

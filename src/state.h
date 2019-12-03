@@ -16,7 +16,9 @@ struct ax_interp {
     union {
         struct ax_dim dim;
     };
+
     struct ax_desc* desc;
+    struct ax_desc* parent_desc;
 };
 
 struct ax_state {

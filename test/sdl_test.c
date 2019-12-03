@@ -120,8 +120,10 @@ int main(int argc, char** argv)
 
     if (ax_read(ax,
                 "(set-root"
-                "  (rect (fill \"ff7700\")"
-                "        (size 300 200)))"
+                " (container"
+                "  (children (rect (fill \"ff0000\") (size 100 100))"
+                "            (rect (fill \"00ff00\") (size 200 200))"
+                "            (rect (fill \"0000ff\") (size 250 250)))))"
             ) != 0) {
         goto ax_error;
     }
