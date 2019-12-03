@@ -5,11 +5,12 @@
 #include "state.h"
 
 
-void ax__compute_geometry(struct ax_tree* tr, struct ax_aabb aabb);
+extern void* ax__create_font(const char* name);
+extern void ax__destroy_font(void* font);
+extern void ax__compute_geometry(struct ax_tree* tr, struct ax_aabb aabb);
 extern void ax__redraw(struct ax_tree* tr, struct ax_drawbuf* db);
 extern struct ax_drawbuf* ax__create_drawbuf();
 extern void ax__free_drawbuf(struct ax_drawbuf* db);
-
 
 static void ax_init_tree(struct ax_tree* tr)
 {
@@ -73,12 +74,17 @@ static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
         break;
 
     case AX_NODE_TEXT: {
-        node->t.desc = desc->t;
         char* text = malloc(strlen(desc->t.text) + 1);
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
-        node->t.desc.text = text;
-        node->t.lines = NULL;
+        void* font = ax__create_font(desc->t.font_name);
+        ASSERT(font != NULL, "create font");
+        node->t = (struct ax_node_t) {
+            .color = desc->t.color,
+            .text = text,
+            .font = font,
+            .lines = NULL,
+        };
         break;
     }
 
@@ -97,7 +103,8 @@ static void ax_free_node_data(struct ax_node* node)
         break;
     case AX_NODE_TEXT:
         ax__free_node_t_line(node->t.lines);
-        free((void*) node->t.desc.text);
+        ax__destroy_font(node->t.font);
+        free(node->t.text);
         break;
     default:
         break;

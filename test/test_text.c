@@ -1,5 +1,32 @@
 #include "helpers.h"
 #include "../src/text.h"
+#include "../src/utils.h"
+
+
+void ax__measure_text(
+    void* ud,
+    const char* text,
+    struct ax_text_metrics* tm)
+{
+    ax_length font_size = *(ax_length*) ud;
+    tm->line_spacing = tm->text_height = font_size;
+    tm->width = strlen(text) * font_size;
+}
+
+void* ax__create_font(const char* name)
+{
+    // "size:<N>"
+    ASSERT(strncmp(name, "size:", 5) == 0, "invalid fake font");
+    ax_length* font = malloc(sizeof(ax_length));
+    ASSERT(font != NULL, "malloc ax_length for fake font");
+    *font = strtol(name + 5, NULL, 10);
+    return font;
+}
+
+void ax__destroy_font(void* font)
+{
+    free(font);
+}
 
 
 TEST(text_3_words)
@@ -58,17 +85,6 @@ TEST(text_linebreak_chars)
     e = ax__text_iter_next(&ti);
     CHECK_IEQ(e, AX_TEXT_END); CHECK_STREQ(ti.line, "Bang.");
     ax__text_iter_free(&ti);
-}
-
-
-void ax__measure_text(
-    void* ud,
-    const char* text,
-    struct ax_text_metrics* tm)
-{
-    ax_length font_size = *(ax_length*) ud;
-    tm->line_spacing = tm->text_height = font_size;
-    tm->width = strlen(text) * font_size;
 }
 
 

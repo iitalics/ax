@@ -121,8 +121,8 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
         struct ax_text_metrics tm;
         struct ax_text_iter ti;
         enum ax_text_elem te;
-        ax__text_iter_init(&ti, node->t.desc.text);
-        ax__text_iter_set_font(&ti, node->t.desc.font);
+        ax__text_iter_init(&ti, node->t.text);
+        ax__text_iter_set_font(&ti, node->t.font);
         ti.max_width = node->avail.w;
         do {
             te = ax__text_iter_next(&ti);
@@ -132,7 +132,7 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
 
             case AX_TEXT_EOL:
             case AX_TEXT_END:
-                ax__measure_text(node->t.desc.font, ti.line, &tm);
+                ax__measure_text(node->t.font, ti.line, &tm);
                 n_lines++;
                 max_w = MAX(max_w, tm.width);
                 break;
@@ -312,11 +312,11 @@ static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
         ax__free_node_t_line(node->t.lines);
         node->t.lines = NULL;
         struct ax_text_metrics tm;
-        ax__measure_text(node->t.desc.font, "", &tm);
+        ax__measure_text(node->t.font, "", &tm);
         struct ax_text_iter ti;
         enum ax_text_elem te;
-        ax__text_iter_init(&ti, node->t.desc.text);
-        ax__text_iter_set_font(&ti, node->t.desc.font);
+        ax__text_iter_init(&ti, node->t.text);
+        ax__text_iter_set_font(&ti, node->t.font);
         ti.max_width = node->target.w;
         do {
             te = ax__text_iter_next(&ti);

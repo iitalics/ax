@@ -48,8 +48,8 @@ struct ax_desc_r {
 
 struct ax_desc_t {
     ax_color color;
-    char const* text;
-    void* font;
+    const char* text;
+    const char* font_name;
 };
 
 struct ax_flex_child_attrs {

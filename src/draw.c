@@ -52,8 +52,8 @@ static void ax_redraw_(struct ax_node* node, struct ax_drawbuf* db)
         {
             struct ax_draw* d = ax_drawbuf_ins(db);
             d->ty = AX_DRAW_TEXT;
-            d->t.color = node->t.desc.color;
-            d->t.font = node->t.desc.font;
+            d->t.color = node->t.color;
+            d->t.font = node->t.font;
             d->t.text = line->str;
             d->t.pos = line->coord;
         }

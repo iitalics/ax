@@ -17,7 +17,9 @@ struct ax_node_c {
 };
 
 struct ax_node_t {
-    struct ax_desc_t desc;
+    ax_color color;
+    char* text;
+    void* font;
     struct ax_node_t_line* lines;
 };
 

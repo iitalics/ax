@@ -44,6 +44,24 @@ void ax__measure_text(
 }
 
 
+void* ax__create_font(const char* name)
+{
+    // "size:<N>,path:<PATH>"
+    char* s = (char*) name;
+    ASSERT(strncmp(s, "size:", 5) == 0, "invalid font");
+    long size = strtol(s + 5, &s, 10);
+    ASSERT(strncmp(s, ",path:", 6) == 0, "invalid font");
+    char* path = s + 6;
+    return TTF_OpenFont(path, size);
+}
+
+void ax__destroy_font(void* font)
+{
+    TTF_CloseFont(font);
+}
+
+
+
 static int build_example(struct ax_state* ax, size_t n)
 {
     char buf[1024];
@@ -75,7 +93,6 @@ int main(int argc, char** argv)
     SDL_Window* win = NULL;
     SDL_Renderer* rn = NULL;
     struct ax_state* ax = NULL;
-    TTF_Font* a_font = NULL;
 
     const int width = 800;
     const int height = 400;
@@ -89,12 +106,6 @@ int main(int argc, char** argv)
     }
 
     if (TTF_Init() != 0) {
-        goto ttf_error;
-    }
-
-    a_font = TTF_OpenFont("/usr/share/fonts/TTF/Roboto-Light.ttf", 50);
-    TTF_SetFontHinting(a_font, TTF_HINTING_NORMAL);
-    if (a_font == NULL) {
         goto ttf_error;
     }
 
@@ -198,9 +209,6 @@ ttf_error:
     goto cleanup;
 
 cleanup:
-    if (a_font != NULL) {
-        TTF_CloseFont(a_font);
-    }
     ax_destroy_state(ax);
     SDL_DestroyWindow(win);
     if (TTF_WasInit()) {
