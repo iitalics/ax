@@ -17,7 +17,6 @@ test_gen   = _build/tests.inc
 etags = etags
 tags_srcs = ${c_srcs} ${c_hdr_srcs} ${c_test_srcs}
 
-py3 = python3
 rkt = racket
 
 all: ax_test ax_sdl_test
@@ -55,7 +54,7 @@ _build/%.c.o: src/%.c
 
 _build/tests.inc: ${c_test_srcs}
 	@mkdir -p _build
-	${py3} scripts/find_tests.py test $@
+	${rkt} scripts/find-tests.rkt $(wildcard test/test_*.c) > $@
 
 _build/parser_rules.inc: scripts/rules.rkt scripts/sexp-yacc.rkt
 	@mkdir -p _build
