@@ -262,9 +262,12 @@ int ax_read_end(struct ax_state* s)
 enum ax_interp_mode {
     M_NONE = 0,
     M_LOG,
+    M_TEXT,
+    M_FONT,
+    M_FILL,
+    M_TEXT_COLOR,
     M_DIM_W,
     M_DIM_H,
-    M_FILL,
     M_MAIN_JUSTIFY,
     M_CROSS_JUSTIFY,
     M_SELF_JUSTIFY,
@@ -347,7 +350,12 @@ static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
         };
         break;
     case AX_NODE_TEXT:
-        NOT_IMPL();
+        desc->t = (struct ax_desc_t) {
+            .color = 0x000000,
+            .font_name = "size:10",
+            .text = "blah",
+        };
+        break;
     default: NO_SUCH_NODE_TAG();
     }
     desc->flex_attrs = (struct ax_flex_child_attrs) {
@@ -393,6 +401,9 @@ static void ax_interp_begin_cross_justify(struct ax_interp* it) { it->mode = M_C
 static void ax_interp_begin_self_justify(struct ax_interp* it) { it->mode = M_SELF_JUSTIFY; }
 static void ax_interp_begin_grow(struct ax_interp* it) { it->mode = M_GROW; }
 static void ax_interp_begin_shrink(struct ax_interp* it) { it->mode = M_SHRINK; }
+static void ax_interp_begin_text(struct ax_interp* it) { it->mode = M_TEXT; }
+static void ax_interp_begin_font(struct ax_interp* it) { it->mode = M_FONT; }
+static void ax_interp_begin_text_color(struct ax_interp* it) { it->mode = M_TEXT_COLOR; }
 
 static void ax_interp_string(struct ax_interp* it, const char* str)
 {
@@ -401,8 +412,18 @@ static void ax_interp_string(struct ax_interp* it, const char* str)
         printf("[LOG] %s\n", str);
         break;
     case M_FILL:
-        //printf("[LOG] fill: %s\n", str);
         it->desc->r.fill = strtol(str, NULL, 16);
+        break;
+    case M_TEXT_COLOR:
+        it->desc->t.color = strtol(str, NULL, 16);
+        break;
+    case M_TEXT:
+        it->desc->t.text = malloc(strlen(str) + 1);
+        strcpy((char*) it->desc->t.text, str);
+        break;
+    case M_FONT:
+        it->desc->t.font_name = malloc(strlen(str) + 1);
+        strcpy((char*) it->desc->t.font_name, str);
         break;
     default: break;
     }

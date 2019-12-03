@@ -62,6 +62,8 @@ void ax__destroy_font(void* font)
 
 
 
+#define ROBOTO "/usr/share/fonts/TTF/Roboto-Light.ttf"
+
 static int build_example(struct ax_state* ax, size_t n)
 {
     char buf[1024];
@@ -75,11 +77,17 @@ static int build_example(struct ax_state* ax, size_t n)
                      ax__lerp_colors(0xffcc11, 0x8822ff, i, n),
                      100 + i * 5, 100 + i * 30,
                      i == 0 ? 0 : 1);
+        if (i == 2) {
+            s += sprintf(s,
+                         "(text \"Hello\""
+                         "      (font \"size:50,path:" ROBOTO "\"))");
+        }
     }
-    s += sprintf(s, ")"
-                 "  (main-justify evenly)"
-                 "  (cross-justify between)"
-                 "  single-line))");
+    s += sprintf(s,
+                 ")"
+                 " (main-justify evenly)"
+                 " (cross-justify between)"
+                 " single-line))");
     printf("(%zu bytes)\n", s - buf);
     return ax_read(ax, buf);
 }

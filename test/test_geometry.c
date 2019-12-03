@@ -70,25 +70,27 @@ TEST(main_justify_around_2r)
 
 /* Fitting a single text node into a window */
 
-#define TEXT_TEST(_aw, _ah, _fsz, _str, _expw, _exph)               \
-    struct ax_state* s = ax_new_state();                            \
-    ax_set_dimensions(s, AX_DIM(_aw, _ah));                         \
-    ax_length font_size = _fsz;                                     \
-    ax_set_root(s, &(struct ax_desc) TEXT(0, _str, &font_size));    \
-    CHECK_SZEQ(s->tree.count, (size_t) 1);                          \
-    CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                              \
-    CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw));             \
-    CHECK_FLEQ(0.001, N(0)->hypoth.h, (float) (_exph));             \
+#define TEXT_TEST(_aw, _ah, _fsz, _str, _expw, _exph)   \
+    struct ax_state* s = ax_new_state();                \
+    ax_read(s,                                          \
+            "(set-dim " # _aw " " # _ah ")"             \
+            "(set-root"                                 \
+            " (text \"" _str "\""                       \
+            "       (font \"size:" # _fsz "\")))");     \
+    CHECK_SZEQ(s->tree.count, (size_t) 1);              \
+    CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                  \
+    CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw)); \
+    CHECK_FLEQ(0.001, N(0)->hypoth.h, (float) (_exph)); \
     ax_destroy_state(s)
 
-/*TEST(text_geom_2w_1l)
-{ TEXT_TEST(200, 200, 10, "Hello, world", 120, 10); } */
+TEST(text_geom_2w_1l)
+{ TEXT_TEST(200, 200, 10, "Hello, world", 120, 10); }
 
-/*TEST(text_geom_2w_2l)
-{ TEXT_TEST(100, 100, 10, "Hello, world", 60, 20); } */
+TEST(text_geom_2w_2l)
+{ TEXT_TEST(100, 100, 10, "Hello, world", 60, 20); }
 
-/*TEST(text_geom_3w_2l)
-{ TEXT_TEST(100, 100, 10, "Hello, za world", 90, 20); } */
+TEST(text_geom_3w_2l)
+{ TEXT_TEST(100, 100, 10, "Hello, za world", 90, 20); }
 
 #undef TEXT_TEST
 

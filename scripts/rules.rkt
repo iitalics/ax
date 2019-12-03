@@ -12,12 +12,14 @@
 [<node> (rect <r-attr> ...)
         #:before "ax_interp_begin_node(it, AX_NODE_RECTANGLE);\n"
         (container <c-children> <c-attr> ...)
-        #:before "ax_interp_begin_node(it, AX_NODE_CONTAINER);\n"]
+        #:before "ax_interp_begin_node(it, AX_NODE_CONTAINER);\n"
+        (text <str> <t-attr> ...)
+        #:before "ax_interp_begin_node(it, AX_NODE_TEXT);\nax_interp_begin_text(it);\n"]
 
 [<r-attr> (size <len> <len>)
           #:before "ax_interp_begin_dim(it);\n"
           #:after "ax_interp_set_rect_size(it);\n"
-          (fill <str>)
+          (fill <color>)
           #:before "ax_interp_begin_fill(it);\n"
           <flex-attr>]
 
@@ -31,6 +33,10 @@
           multi-line #:op "ax_interp_single_line(it, false);\n"
           <flex-attr>]
 
+[<t-attr> (font <str>) #:before "ax_interp_begin_font(it);\n"
+          (color <color>) #:before "ax_interp_begin_text_color(it);\n"
+          <flex-attr>]
+
 [<flex-attr> (grow <int>) #:before "ax_interp_begin_grow(it);\n"
              (shrink <int>) #:before "ax_interp_begin_shrink(it);\n"
              (self-cross-justify <justify>) #:before "ax_interp_begin_self_justify(it);\n"]
@@ -38,6 +44,7 @@
 [<str> STR #:op "ax_interp_string(it, ~a);\n"]
 [<int> INT #:op "ax_interp_integer(it, ~a);\n"]
 [<len> <int>]
+[<color> <str>]
 
 [<justify> start #:op "ax_interp_justify(it, AX_JUSTIFY_START);\n"
            end #:op "ax_interp_justify(it, AX_JUSTIFY_END);\n"
