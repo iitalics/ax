@@ -78,31 +78,35 @@ static int build_example(struct ax_state* ax, size_t n)
     char* s = buf;
     s += sprintf(s, "(set-root (container (children");
     for (size_t i = 0; i < n; i++) {
-        s += sprintf(s,
-                     "(rect (size %zu %zu)"
-                     "      (shrink %d)",
-                     100 + i * 5, 100 + i * 30,
-                     i == 0 ? 0 : 1);
 
         if (i == 1) {
-            s += sprintf(s, "(fill none))");
-        } else {
-            s += sprintf(s,
-                         "(fill \"%06x\"))",
-                         ax__lerp_colors(0xffcc11, 0x8822ff, i, n));
+            s += sprintf(s, "(container (children");
         }
+
+        s += sprintf(s,
+                     "(rect (size %zu %zu)"
+                     "      (shrink %d)"
+                     "(fill \"%06x\"))",
+                     100 + i * 5, 100 + i * 30,
+                     i == 0 ? 0 : 1,
+                     ax__lerp_colors(0xffcc11, 0x8822ff, i, n));
 
         if (i == 2) {
             s += sprintf(s,
                          "(text \"Hello\""
                          "      (font \"size:50,path:" ROBOTO "\"))");
         }
+
+        if (i == 3) {
+            s += sprintf(s, ") (background \"aaaaaa\") multi-line)");
+        }
     }
     s += sprintf(s,
                  ")"
+                 //" (background \"ccddff\")"
                  " (main-justify evenly)"
                  " (cross-justify between)"
-                 " single-line))");
+                 " multi-line))");
     printf("(%zu bytes)\n", s - buf);
     return ax_read(ax, buf);
 }
@@ -135,6 +139,18 @@ int main(int argc, char** argv)
 
     ax = ax_new_state();
     build_example(ax, 5);
+
+    /* if (ax_read(ax, */
+    /*             //"(set-dim 200 200)" */
+    /*             "(set-root"    // blue rect is before inner container */
+    /*             " (container (children (rect (fill \"0000ff\") (size 60 60))" */
+    /*             "                      (container" */
+    /*             "                       (children (rect (fill \"ff0000\") (size 60 30))" */
+    /*             "                                 (rect (fill \"00ff00\") (size 60 60)))" */
+    /*             "                       (background \"ff00ff\")))" */
+    /*             "            (background \"ffff00\")))") != 0) { */
+    /*     goto ax_error; */
+    /* } */
 
     for (;;) {
         SDL_Event ev;

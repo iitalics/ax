@@ -142,3 +142,117 @@ TEST(draw_text_2l)
     CHECK_FLEQ(0.0001, *(ax_length*) D(1).t.font, 10.0);
     ax_destroy_state(s);
 }
+
+
+TEST(draw_2r_bg)
+{
+    struct ax_state* s = ax_new_state();
+    ax_read(s,
+            "(set-dim 200 200)"
+            "(set-root"
+            " (container (children (rect (fill \"ff0000\") (size 60 60))"
+            "                      (rect (fill \"0000ff\") (size 60 60)))"
+            "            (background \"00ff00\")))");
+    const struct ax_drawbuf* d = ax_draw(s);
+    CHECK_SZEQ(d->len, (size_t) 3);
+    // container
+    CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(0).r.fill, 0x00ff00);
+    CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(200.0, 200.0));
+    // red rect
+    CHECK_IEQ(D(1).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(1).r.fill, 0xff0000);
+    CHECK_POSEQ(D(1).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(1).r.bounds.s, AX_DIM(60.0, 60.0));
+    // blue rect
+    CHECK_IEQ(D(2).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(2).r.fill, 0x0000ff);
+    CHECK_POSEQ(D(2).r.bounds.o, AX_POS(60.0, 0.0));
+    CHECK_DIMEQ(D(2).r.bounds.s, AX_DIM(60.0, 60.0));
+    ax_destroy_state(s);
+}
+
+TEST(draw_nested_bg)
+{
+    struct ax_state* s = ax_new_state();
+    ax_read(s,
+            "(set-dim 200 200)"
+            "(set-root"
+            " (container (children (container"
+            "                       (children (rect (fill \"ff0000\") (size 60 60))"
+            "                                 (rect (fill \"00ff00\") (size 60 20)))"
+            "                       (background \"ff00ff\"))"
+            "                      (rect (fill \"0000ff\") (size 60 60)))"
+            "            (background \"ffff00\")))");
+    const struct ax_drawbuf* d = ax_draw(s);
+    CHECK_SZEQ(d->len, (size_t) 5);
+    // outer container
+    CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(0).r.fill, 0xffff00);
+    CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(200.0, 200.0));
+    // inner container
+    CHECK_IEQ(D(1).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(1).r.fill, 0xff00ff);
+    CHECK_POSEQ(D(1).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(1).r.bounds.s, AX_DIM(120.0, 60.0));
+    // red rect
+    CHECK_IEQ(D(2).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(2).r.fill, 0xff0000);
+    CHECK_POSEQ(D(2).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(2).r.bounds.s, AX_DIM(60.0, 60.0));
+    // green rect
+    CHECK_IEQ(D(3).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(3).r.fill, 0x00ff00);
+    CHECK_POSEQ(D(3).r.bounds.o, AX_POS(60.0, 0.0));
+    CHECK_DIMEQ(D(3).r.bounds.s, AX_DIM(60.0, 20.0));
+    // blue rect
+    CHECK_IEQ(D(4).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(4).r.fill, 0x0000ff);
+    CHECK_POSEQ(D(4).r.bounds.o, AX_POS(120.0, 0.0));
+    CHECK_DIMEQ(D(4).r.bounds.s, AX_DIM(60.0, 60.0));
+    ax_destroy_state(s);
+}
+
+TEST(draw_nested_2_bg)
+{
+    struct ax_state* s = ax_new_state();
+    ax_read(s,
+            "(set-dim 200 200)"
+            "(set-root"    // blue rect is before inner container
+            " (container (children (rect (fill \"0000ff\") (size 60 60))"
+            "                      (container"
+            "                       (children (rect (fill \"ff0000\") (size 60 60))"
+            "                                 (rect (fill \"00ff00\") (size 60 20)))"
+            "                       (background \"ff00ff\")))"
+            "            (background \"ffff00\")))");
+    const struct ax_drawbuf* d = ax_draw(s);
+    CHECK_SZEQ(d->len, (size_t) 5);
+    // outer container
+    CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(0).r.fill, 0xffff00);
+    CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(0).r.bounds.s, AX_DIM(200.0, 200.0));
+    // blue rect
+    CHECK_IEQ(D(1).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(1).r.fill, 0x0000ff);
+    CHECK_POSEQ(D(1).r.bounds.o, AX_POS(0.0, 0.0));
+    CHECK_DIMEQ(D(1).r.bounds.s, AX_DIM(60.0, 60.0));
+    // inner container
+    CHECK_IEQ(D(2).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(2).r.fill, 0xff00ff);
+    CHECK_POSEQ(D(2).r.bounds.o, AX_POS(60.0, 0.0));
+    CHECK_DIMEQ(D(2).r.bounds.s, AX_DIM(120.0, 60.0));
+    // red rect
+    CHECK_IEQ(D(3).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(3).r.fill, 0xff0000);
+    CHECK_POSEQ(D(3).r.bounds.o, AX_POS(60.0, 0.0));
+    CHECK_DIMEQ(D(3).r.bounds.s, AX_DIM(60.0, 60.0));
+    // green rect
+    CHECK_IEQ(D(4).ty, AX_DRAW_RECT);
+    CHECK_IEQ_HEX(D(4).r.fill, 0x00ff00);
+    CHECK_POSEQ(D(4).r.bounds.o, AX_POS(120.0, 0.0));
+    CHECK_DIMEQ(D(4).r.bounds.s, AX_DIM(60.0, 20.0));
+    ax_destroy_state(s);
+}
