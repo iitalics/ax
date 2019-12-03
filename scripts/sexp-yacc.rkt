@@ -105,6 +105,7 @@
 ;; ====================
 
 (define cgv:the-state "it->state")
+(define cgv:the-ctx "it->ctx")
 (define cgv:the-token "p")
 (define cgv:int-value "pr->i")
 (define cgv:double-value "pr->d")
@@ -128,6 +129,7 @@
 (define (cg:ok) (displayln "return 0;"))
 (define (cg:tok-error) (displayln "return ax_interp_generic_err(it);"))
 (define (cg:impossible-state-error) (displayln "NO_SUCH_TAG(\"ax_interp.state\");"))
+(define (cg:impossible-ctx-error) (displayln "NO_SUCH_TAG(\"ax_interp.ctx\");"))
 (define (cg:set-state s [denote values]) (printf "it->state = ~a;\n" (denote s)))
 (define (cg:label l) (printf "~a:" l))
 (define (cg:goto l) (printf "goto ~a;\n" l))
@@ -160,6 +162,8 @@
 (struct action [token next-state func] #:transparent)
 
 (struct epsilon [next-state] #:transparent)
+(struct ep:push epsilon [ctx] #:transparent)
+(struct ep:pop-if epsilon [ctx] #:transparent)
 (struct ep:goto epsilon [] #:transparent)
 
 ;; [hash state => (or [listof action]
@@ -223,10 +227,19 @@
     (cg:label s)
     (match δs
       [(list (? epsilon? eps) ...)
-       (for ([ep (in-list eps)])
-         (match ep
-           [(ep:goto s*) (cg:goto s*)]
-           [_ (void)]))]
+       (cg:case cgv:the-ctx
+                (for/hash ([ep (in-list eps)]
+                           #:when (ep:pop-if? ep))
+                  (match-define (ep:pop-if s* c) ep)
+                  (values (c->code c) (λ () (cg:pop-ctx) (cg:goto s*))))
+                (or (for/or ([ep (in-list eps)])
+                      (match ep
+                        [(ep:push s* c)
+                         (λ () (cg:push-ctx c c->code) (cg:goto s*))]
+                        [(ep:goto s*)
+                         (λ () (cg:goto s*))]
+                        [_ #f]))
+                    cg:impossible-ctx-error))]
       [_
        (cg:set-state s s->code)
        (cg:ok)]))
@@ -234,20 +247,24 @@
   (eprintf "* Generated transition table with ~a states, ~a contexts\n"
            (hash-count s=>code) (hash-count c=>code)))
 
-;; returns start state given an end state
-;; ---
-;; rules nonterm state -> state
-(define (compile-nonterm rules nt s1)
-  (define-values [s0 s1*] (compile-nonterm* rules nt))
-  (add-transition! s1* (ep:goto s1))
-  s0)
-
 ;; returns start and end state
 ;; ---
 ;; rules nonterm -> state state
-(define (compile-nonterm* rules nt)
-  (define s0 (gensym 's_start))
-  (define s1 (gensym 's_end))
+(define (compile-nonterm rules nt)
+  (cond
+    [(hash-has-key? nonterm-memo nt)
+     (match-define (cons s0 s1) (hash-ref nonterm-memo nt))
+     (values s0 s1)]
+    [else
+     (define s0 (gensym 's_start))
+     (define s1 (gensym 's_end))
+     (hash-set! nonterm-memo nt (cons s0 s1))
+     (compile-nonterm* rules nt s0 s1)
+     (values s0 s1)]))
+
+(define nonterm-memo (make-hash))
+
+(define (compile-nonterm* rules nt s0 s1)
   (define rhs (nonterm-rhs nt rules))
 
   (define lists
@@ -265,18 +282,20 @@
 
   (unless (hash-empty? lists)
     (define s-beg (gensym 's_lp))
-    (define s-end (gensym 's_rp))
     (add-transition! s0 (action (tk:lp) s-beg void))
-    (add-transition! s-end (action (tk:rp) s1 void))
     (for ([(hd pd) (in-hash lists)])
       (match-define (pd:list _ args rep? before after) pd)
-      (define s-args (compile-list rules args rep? s-end after))
-      (add-transition! s-beg
-                       (action (tk:sym hd)
-                               s-args
-                               before))))
-
-  (values s0 s1))
+      (define s-end (gensym 's_rp))
+      (define-values [s-args loop-s0 loop-ctx] (compile-list rules args s-end after))
+      (add-transition! s-beg (action (tk:sym hd) s-args before))
+      (cond
+        [rep?
+         (define s-pop (gensym 's_pop))
+         (add-transition! s-end (ep:push loop-s0 loop-ctx))
+         (add-transition! loop-s0 (action (tk:rp) s-pop after))
+         (add-transition! s-pop (ep:pop-if s1 loop-ctx))]
+        [else
+         (add-transition! s-end (action (tk:rp) s1 after))]))))
 
 (define (terminal-token tm)
   (match tm
@@ -288,21 +307,23 @@
     [(pd:str _) cgv:str-value]
     [(pd:int _) cgv:int-value]))
 
-;; returns start state given an end state
+;; returns start state + start state of last arg, given an end state
 ;; ---
-;; rules [listof nt-sym] boolean state cgf -> state
-(define (compile-list rules args rep-last? s1 after)
-  (when rep-last?
-    (error 'compile-list "repetitions unimplemented"))
-  (for/fold ([s-next s1])
+;; rules [listof nt-sym] state cgf -> state state
+(define (compile-list rules args s1 after)
+  (for/fold ([s1 s1] [last-s0 #f] [last-ctx #f])
             ([arg-name (in-list (reverse args))])
-    (compile-nonterm rules
-                     (lookup-nonterm rules arg-name)
-                     s-next)))
+    (define nt (lookup-nonterm rules arg-name))
+    (define-values [s0* s1*] (compile-nonterm rules nt))
+    (define s0 (gensym 's_push))
+    (define ctx (gensym 'ctx))
+    (add-transition! s0 (ep:push s0* ctx))
+    (add-transition! s1* (ep:pop-if s1 ctx))
+    (values s0 (or last-s0 s0*) (or last-ctx ctx))))
 
 ;; rules -> state
 (define (compile-rules rules)
-  (define-values [s0 s1] (compile-nonterm* rules (rules-start rules)))
+  (define-values [s0 s1] (compile-nonterm rules (rules-start rules)))
   (add-transition! s1 (ep:goto s0))
   s0)
 
