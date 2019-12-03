@@ -258,6 +258,8 @@ enum ax_interp_mode {
     M_DIM_W,
     M_DIM_H,
     M_FILL,
+    M_MAIN_JUSTIFY,
+    M_CROSS_JUSTIFY,
     M__MAX,
 };
 
@@ -376,6 +378,8 @@ static void ax_interp_end_children(struct ax_interp* it)
 static void ax_interp_begin_log(struct ax_interp* it) { it->mode = M_LOG; }
 static void ax_interp_begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
 static void ax_interp_begin_fill(struct ax_interp* it) { it->mode = M_FILL; }
+static void ax_interp_begin_main_justify(struct ax_interp* it) { it->mode = M_MAIN_JUSTIFY; }
+static void ax_interp_begin_cross_justify(struct ax_interp* it) { it->mode = M_CROSS_JUSTIFY; }
 
 static void ax_interp_string(struct ax_interp* it, const char* str)
 {
@@ -405,6 +409,24 @@ static void ax_interp_integer_len(struct ax_interp* it, long v)
         break;
     default: break;
     }
+}
+
+static void ax_interp_justify(struct ax_interp* it, enum ax_justify just)
+{
+    switch (it->mode) {
+    case M_MAIN_JUSTIFY:
+        it->desc->c.main_justify = just;
+        break;
+    case M_CROSS_JUSTIFY:
+        it->desc->c.cross_justify = just;
+        break;
+    default: break;
+    }
+}
+
+static void ax_interp_single_line(struct ax_interp* it, bool s)
+{
+    it->desc->c.single_line = s;
 }
 
 static int ax_interp_generic_err(struct ax_interp* it)
