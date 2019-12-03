@@ -272,30 +272,30 @@ static void ax_interp_free(struct ax_interp* it)
     free(it->err_msg);
 }
 
-static void ax_interp_log_stack(struct ax_interp* it)
+/* static void ax_interp_log_stack(struct ax_interp* it)
 {
     printf("[LOG] stack: ");
     for (size_t i = 0; i < it->ctx_sp; i++) {
         printf("%d, ", it->ctx_stack[i]);
     }
     printf("%d\n", it->ctx);
-}
+} */
 
 static void ax_interp_push(struct ax_interp* it, int new_ctx)
 {
     ASSERT(it->ctx_sp < LENGTH(it->ctx_stack), "stack overflow");
     it->ctx_stack[it->ctx_sp++] = it->ctx;
     it->ctx = new_ctx;
-    printf("[LOG] push %d\n", new_ctx);
-    ax_interp_log_stack(it);
+    //printf("[LOG] push %d\n", new_ctx);
+    //ax_interp_log_stack(it);
 }
 
 static void ax_interp_pop(struct ax_interp* it)
 {
     ASSERT(it->ctx_sp > 0, "stack underflow");
     it->ctx = it->ctx_stack[--it->ctx_sp];
-    printf("[LOG] pop\n");
-    ax_interp_log_stack(it);
+    //printf("[LOG] pop\n");
+    //ax_interp_log_stack(it);
 }
 
 static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
@@ -345,7 +345,7 @@ static void ax_interp_string(struct ax_interp* it, const char* str)
         printf("[LOG] %s\n", str);
         break;
     case M_FILL:
-        printf("[LOG] fill: %s\n", str);
+        //printf("[LOG] fill: %s\n", str);
         it->desc->r.fill = strtol(str, NULL, 16);
         break;
     default: break;
@@ -362,7 +362,7 @@ static void ax_interp_integer_len(struct ax_interp* it, long v)
     case M_DIM_H:
         it->dim.h = v;
         it->mode = M_NONE;
-        printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
+        //printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
         break;
     default: break;
     }
