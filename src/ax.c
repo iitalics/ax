@@ -404,6 +404,7 @@ static void ax_interp_begin_shrink(struct ax_interp* it) { it->mode = M_SHRINK; 
 static void ax_interp_begin_text(struct ax_interp* it) { it->mode = M_TEXT; }
 static void ax_interp_begin_font(struct ax_interp* it) { it->mode = M_FONT; }
 static void ax_interp_begin_text_color(struct ax_interp* it) { it->mode = M_TEXT_COLOR; }
+static void ax_interp_begin_rgb(struct ax_interp* it) { it->col.rgb_idx = 0; }
 
 static void ax_interp_color(struct ax_interp* it, ax_color col)
 {
@@ -454,6 +455,17 @@ static void ax_interp_integer(struct ax_interp* it, long v)
     case M_SHRINK:
         it->desc->flex_attrs.shrink = v;
         break;
+
+    case M_FILL:
+    case M_TEXT_COLOR:
+        // (rgb ...) form
+        it->col.rgb[it->col.rgb_idx++] = v < 0 ? 0 : v > 255 ? 255 : v;
+        if (it->col.rgb_idx >= 3) {
+            ax_interp_color(it, ax_rgb_color(it->col.rgb));
+            it->mode = M_NONE;
+        }
+        break;
+
     default: break;
     }
 }

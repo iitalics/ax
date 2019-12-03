@@ -15,6 +15,10 @@ struct ax_interp {
 
     union {
         struct ax_dim dim;
+        struct {
+            uint8_t rgb[3];
+            size_t rgb_idx;
+        } col;
     };
 
     struct ax_desc* desc;

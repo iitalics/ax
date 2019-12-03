@@ -84,6 +84,22 @@ TEST(draw_3r)
     ax_destroy_state(s);
 }
 
+TEST(draw_3r_colors)
+{
+    struct ax_state* s = ax_new_state();
+    ax_read(s,
+            "(set-root"
+            " (container (children (rect (fill \"123456\"))"
+            "                      (rect (fill none))"
+            "                      (rect (fill (rgb 100 200 50))))))");
+
+    const struct ax_drawbuf* d = ax_draw(s);
+    CHECK_SZEQ(d->len, (size_t) 3);
+    CHECK_IEQ_HEX(D(0).r.fill, 0x123456);
+    CHECK_TRUE(AX_COLOR_IS_NULL(D(1).r.fill));
+    CHECK_IEQ_HEX(D(2).r.fill, 0x64c832);
+}
+
 TEST(draw_text_1l)
 {
     struct ax_state* s = ax_new_state();
