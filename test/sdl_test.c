@@ -44,6 +44,29 @@ void ax__measure_text(
 }
 
 
+static int build_example(struct ax_state* ax, size_t n)
+{
+    char buf[1024];
+    char* s = buf;
+    s += sprintf(s, "(set-root (container (children");
+    for (size_t i = 0; i < n; i++) {
+        s += sprintf(s,
+                     "(rect (fill \"%06x\")"
+                     "      (size %zu %zu)"
+                     "      (shrink %d))",
+                     ax__lerp_colors(0xffcc11, 0x8822ff, i, n),
+                     100 + i * 5, 100 + i * 30,
+                     i == 0 ? 0 : 1);
+    }
+    s += sprintf(s, ")"
+                 "  (main-justify evenly)"
+                 "  (cross-justify between)"
+                 "  single-line))");
+    printf("(%zu bytes)\n", s - buf);
+    return ax_read(ax, buf);
+}
+
+
 int main(int argc, char** argv)
 {
     (void) argc, (void) argv;
@@ -75,63 +98,8 @@ int main(int argc, char** argv)
         goto ttf_error;
     }
 
-    struct ax_desc root_desc;
-    struct ax_desc children[5];
-
-    for (size_t i = 0; i < LENGTH(children); i++) {
-        struct ax_desc* next_child =
-            (i + 1 < LENGTH(children)) ?
-            &children[i + 1] :
-            NULL;
-        children[i] = (struct ax_desc) {
-            .ty = AX_NODE_RECTANGLE,
-            .parent = &root_desc,
-            .flex_attrs = {
-                .grow = 0,
-                .shrink = (i == 0) ? 0 : 1,
-                .cross_justify = AX_JUSTIFY_CENTER,
-                .next_child = next_child,
-            },
-            .r = {
-                .fill = ax__lerp_colors(0xffcc11, // #fc1
-                                        0x8822ff, // #82f
-                                        i, LENGTH(children)),
-                .size = AX_DIM(100.0 + i * 5.0, 100.0 + i * 30.0),
-            },
-        };
-    }
-
-    root_desc = (struct ax_desc) {
-        .ty = AX_NODE_CONTAINER,
-        .parent = NULL,
-        .flex_attrs = { .next_child = NULL },
-        .c = {
-            .first_child = &children[0],
-            .main_justify = AX_JUSTIFY_EVENLY,
-            .cross_justify = AX_JUSTIFY_BETWEEN,
-            .single_line = true,
-        },
-    };
-
     ax = ax_new_state();
-    if (ax_read(ax, "(log \"Hello, world\")") != 0) {
-        goto ax_error;
-    }
-
-    if (ax_read(ax,
-                "(set-root"
-                " (container"
-                "  (children (rect (fill \"ff0000\") (size 100 100) (self-cross-justify end))"
-                "            (rect (fill \"00ff00\") (size 200 200) (shrink 0))"
-                "            (rect (fill \"0000ff\") (size 250 250)))"
-                "  single-line"
-                "  (main-justify between)"
-                "  (cross-justify center)))"
-            ) != 0) {
-        goto ax_error;
-    }
-
-    //ax_set_root(ax, &root_desc);
+    build_example(ax, 5);
 
     for (;;) {
         SDL_Event ev;
