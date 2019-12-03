@@ -260,6 +260,9 @@ enum ax_interp_mode {
     M_FILL,
     M_MAIN_JUSTIFY,
     M_CROSS_JUSTIFY,
+    M_SELF_JUSTIFY,
+    M_GROW,
+    M_SHRINK,
     M__MAX,
 };
 
@@ -380,6 +383,9 @@ static void ax_interp_begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
 static void ax_interp_begin_fill(struct ax_interp* it) { it->mode = M_FILL; }
 static void ax_interp_begin_main_justify(struct ax_interp* it) { it->mode = M_MAIN_JUSTIFY; }
 static void ax_interp_begin_cross_justify(struct ax_interp* it) { it->mode = M_CROSS_JUSTIFY; }
+static void ax_interp_begin_self_justify(struct ax_interp* it) { it->mode = M_SELF_JUSTIFY; }
+static void ax_interp_begin_grow(struct ax_interp* it) { it->mode = M_GROW; }
+static void ax_interp_begin_shrink(struct ax_interp* it) { it->mode = M_SHRINK; }
 
 static void ax_interp_string(struct ax_interp* it, const char* str)
 {
@@ -395,7 +401,7 @@ static void ax_interp_string(struct ax_interp* it, const char* str)
     }
 }
 
-static void ax_interp_integer_len(struct ax_interp* it, long v)
+static void ax_interp_integer(struct ax_interp* it, long v)
 {
     switch (it->mode) {
     case M_DIM_W:
@@ -406,6 +412,12 @@ static void ax_interp_integer_len(struct ax_interp* it, long v)
         it->dim.h = v;
         it->mode = M_NONE;
         //printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
+        break;
+    case M_GROW:
+        it->desc->flex_attrs.grow = v;
+        break;
+    case M_SHRINK:
+        it->desc->flex_attrs.shrink = v;
         break;
     default: break;
     }
@@ -419,6 +431,9 @@ static void ax_interp_justify(struct ax_interp* it, enum ax_justify just)
         break;
     case M_CROSS_JUSTIFY:
         it->desc->c.cross_justify = just;
+        break;
+    case M_SELF_JUSTIFY:
+        it->desc->flex_attrs.cross_justify = just;
         break;
     default: break;
     }

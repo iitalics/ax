@@ -121,8 +121,8 @@ int main(int argc, char** argv)
     if (ax_read(ax,
                 "(set-root"
                 " (container"
-                "  (children (rect (fill \"ff0000\") (size 100 100))"
-                "            (rect (fill \"00ff00\") (size 200 200))"
+                "  (children (rect (fill \"ff0000\") (size 100 100) (self-cross-justify end))"
+                "            (rect (fill \"00ff00\") (size 200 200) (shrink 0))"
                 "            (rect (fill \"0000ff\") (size 250 250)))"
                 "  single-line"
                 "  (main-justify between)"
