@@ -1,19 +1,19 @@
-cc				= gcc
-cpp				= ${cc} -E
-rkt 			= racket
-cc_flags		= -std=c99 -g -Wall -Werror=implicit-function-declaration
+cc		= gcc
+cpp		= ${cc} -E
+rkt 		= racket
+cc_flags	= -std=c99 -g -Wall -Werror=implicit-function-declaration
 sdl_link_flags	= $(shell pkg-config -libs sdl2 SDL2_ttf)
 
-srcs			= $(shell ${find_srcs})
-gen				= _build/parser_rules.inc
-test_srcs		= $(wildcard test/test_*.c)
-test_gen		= _build/run_tests.inc
-objs			= $(shell ${find_srcs} | ${sed_src2obj})
+srcs		= $(shell ${find_srcs})
+gen		= _build/parser_rules.inc
+test_srcs	= $(wildcard test/test_*.c)
+test_gen	= _build/run_tests.inc
+objs		= $(shell ${find_srcs} | ${sed_src2obj})
 
 find_srcs	= find src -name '*.c'
-sed_src2obj = sed -e 's/src\/\(.*\)\//_build\/src__\1__/;s/$$/.o/'
-sed_obj2src = sed -e 's/_build\/src__\([^_]*\)__/src\/\1\//;s/\.o//'
-sed_2dep    = sed -e 's/$$/.dep/'
+sed_src2obj	= sed -e 's/src\/\(.*\)\//_build\/src__\1__/;s/$$/.o/'
+sed_obj2src	= sed -e 's/_build\/src__\([^_]*\)__/src\/\1\//;s/\.o//'
+sed_2dep	= sed -e 's/$$/.dep/'
 
 
 # make commands
