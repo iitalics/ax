@@ -1,14 +1,14 @@
 #include "helpers.h"
 #include "../src/ax.h"
-#include "../src/state.h"
+#include "../src/core.h"
+#include "../src/tree.h"
 
-#define N(_id)  ax_node_by_id(&s->tree, _id)
-
+#define N(_id)  ax__node_by_id(s->tree, _id)
 
 TEST(empty_root_node)
 {
     struct ax_state* s = ax_new_state();
-    CHECK_SZEQ(s->tree.count, (size_t) 1);
+    CHECK_SZEQ(s->tree->count, (size_t) 1);
     CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
     ax_destroy_state(s);
 }
@@ -24,7 +24,7 @@ TEST(build_tree)
             "(set-dim 200 200)"
             "(set-root"
             " (container (children " TWO_RECTS ")))");
-    CHECK_SZEQ(s->tree.count, (size_t) 3);
+    CHECK_SZEQ(s->tree->count, (size_t) 3);
     CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
     CHECK_IEQ(N(1)->ty, AX_NODE_RECTANGLE);
     CHECK_IEQ(N(2)->ty, AX_NODE_RECTANGLE);
@@ -77,7 +77,7 @@ TEST(main_justify_around_2r)
             "(set-root"                                 \
             " (text \"" _str "\""                       \
             "       (font \"size:" # _fsz "\")))");     \
-    CHECK_SZEQ(s->tree.count, (size_t) 1);              \
+    CHECK_SZEQ(s->tree->count, (size_t) 1);              \
     CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                  \
     CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw)); \
     CHECK_FLEQ(0.001, N(0)->hypoth.h, (float) (_exph)); \
@@ -106,7 +106,7 @@ TEST(spill_3r)
             "            (rect (fill \"00ff00\") (size 80 80))"
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  multi-line))");
-    CHECK_SZEQ(s->tree.count, (size_t) 4);
+    CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 2);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 2);
     CHECK_SZEQ(N(0)->c.line_count[1], (size_t) 1);
@@ -126,7 +126,7 @@ TEST(shrink_3r)
             "            (rect (fill \"00ff00\") (size 80 80))"
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  single-line))");
-    CHECK_SZEQ(s->tree.count, (size_t) 4);
+    CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
     CHECK_POSEQ(N(1)->coord, AX_POS(0.0, 0.0));
@@ -149,7 +149,7 @@ TEST(shrink_3r_asym)
             "            (rect (fill \"00ff00\") (size 80 80))"
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  single-line))");
-    CHECK_SZEQ(s->tree.count, (size_t) 4);
+    CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
     CHECK_POSEQ(N(1)->coord, AX_POS(0.0, 0.0));

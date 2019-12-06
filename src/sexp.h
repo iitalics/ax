@@ -58,8 +58,8 @@ struct ax_parser {
 };
 
 
-extern void ax__parser_init(struct ax_parser* p);
-extern void ax__parser_free(struct ax_parser* p);
+extern void ax__init_parser(struct ax_parser* p);
+extern void ax__free_parser(struct ax_parser* p);
 
 extern enum ax_parse ax__parser_feed(struct ax_parser* p,
                                      char const* chars,

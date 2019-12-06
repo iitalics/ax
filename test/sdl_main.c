@@ -1,25 +1,31 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+
 #include "../src/ax.h"
+#include "../src/draw.h"
+#include "../src/backend.h"
 #include "../src/utils.h"
-#include "../src/text.h"
+
+/*
+ * Utils
+ */
 
 ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
 {
     uint8_t rgb0[3], rgb1[3], rgbL[3];
-    ax_color_rgb(c0, rgb0);
-    ax_color_rgb(c1, rgb1);
+    ax_color_to_rgb(c0, rgb0);
+    ax_color_to_rgb(c1, rgb1);
     for (size_t i = 0; i < 3; i++) {
         rgbL[i] = ((rgb1[i] - rgb0[i]) * t + rgb0[i] * tmax) / tmax;
     }
-    return ax_rgb_color(rgbL);
+    return ax_color_from_rgb(rgbL);
 }
 
 SDL_Color ax__sdl_color(ax_color c)
 {
     uint8_t rgb[3];
-    if (ax_color_rgb(c, rgb)) {
+    if (ax_color_to_rgb(c, rgb)) {
         return (SDL_Color) {
             .a = 0xff,
             .r = rgb[0],
@@ -31,6 +37,53 @@ SDL_Color ax__sdl_color(ax_color c)
     }
 }
 
+/*
+ * Demo
+ */
+
+#define ROBOTO "/usr/share/fonts/TTF/Roboto-Light.ttf"
+
+static int build_example(struct ax_state* ax, size_t n)
+{
+    char buf[2024];
+    char* s = buf;
+    s += sprintf(s, "(set-root (container (children");
+    for (size_t i = 0; i < n; i++) {
+        s += sprintf(s,
+                     "(text \"Hewwo?!\""
+                     "      (font \"size:%zu,path:" ROBOTO "\"))",
+                     10 + i * 5);
+    }
+    s += sprintf(s,
+                 ")"
+                 //" (background \"ccddff\")"
+                 " (main-justify evenly)"
+                 " (cross-justify between)"
+                 " multi-line))");
+    printf("(%zu bytes)\n", s - buf);
+    printf("%s\n", buf);
+    return ax_read(ax, buf);
+}
+
+/*
+ * Implement backend
+ */
+
+void* ax__create_font(const char* name)
+{
+    // "size:<N>,path:<PATH>"
+    char* s = (char*) name;
+    ASSERT(strncmp(s, "size:", 5) == 0, "invalid font");
+    long size = strtol(s + 5, &s, 10);
+    ASSERT(strncmp(s, ",path:", 6) == 0, "invalid font");
+    char* path = s + 6;
+    return TTF_OpenFont(path, size);
+}
+
+void ax__destroy_font(void* font)
+{
+    TTF_CloseFont(font);
+}
 
 void ax__measure_text(
     void* font_voidptr,
@@ -50,67 +103,6 @@ void ax__measure_text(
     tm->line_spacing = TTF_FontLineSkip(font);
     tm->width = w_int;
 }
-
-
-void* ax__create_font(const char* name)
-{
-    // "size:<N>,path:<PATH>"
-    char* s = (char*) name;
-    ASSERT(strncmp(s, "size:", 5) == 0, "invalid font");
-    long size = strtol(s + 5, &s, 10);
-    ASSERT(strncmp(s, ",path:", 6) == 0, "invalid font");
-    char* path = s + 6;
-    return TTF_OpenFont(path, size);
-}
-
-void ax__destroy_font(void* font)
-{
-    TTF_CloseFont(font);
-}
-
-
-
-#define ROBOTO "/usr/share/fonts/TTF/Roboto-Light.ttf"
-
-static int build_example(struct ax_state* ax, size_t n)
-{
-    char buf[1024];
-    char* s = buf;
-    s += sprintf(s, "(set-root (container (children");
-    for (size_t i = 0; i < n; i++) {
-
-        if (i == 1) {
-            s += sprintf(s, "(container (children");
-        }
-
-        s += sprintf(s,
-                     "(rect (size %zu %zu)"
-                     "      (shrink %d)"
-                     "(fill \"%06x\"))",
-                     100 + i * 5, 100 + i * 30,
-                     i == 0 ? 0 : 1,
-                     ax__lerp_colors(0xffcc11, 0x8822ff, i, n));
-
-        if (i == 2) {
-            s += sprintf(s,
-                         "(text \"Hello\""
-                         "      (font \"size:50,path:" ROBOTO "\"))");
-        }
-
-        if (i == 3) {
-            s += sprintf(s, ") (background \"aaaaaa\") multi-line)");
-        }
-    }
-    s += sprintf(s,
-                 ")"
-                 //" (background \"ccddff\")"
-                 " (main-justify evenly)"
-                 " (cross-justify between)"
-                 " multi-line))");
-    printf("(%zu bytes)\n", s - buf);
-    return ax_read(ax, buf);
-}
-
 
 int main(int argc, char** argv)
 {
@@ -138,19 +130,7 @@ int main(int argc, char** argv)
     }
 
     ax = ax_new_state();
-    build_example(ax, 5);
-
-    /* if (ax_read(ax, */
-    /*             //"(set-dim 200 200)" */
-    /*             "(set-root"    // blue rect is before inner container */
-    /*             " (container (children (rect (fill \"0000ff\") (size 60 60))" */
-    /*             "                      (container" */
-    /*             "                       (children (rect (fill \"ff0000\") (size 60 30))" */
-    /*             "                                 (rect (fill \"00ff00\") (size 60 60)))" */
-    /*             "                       (background \"ff00ff\")))" */
-    /*             "            (background \"ffff00\")))") != 0) { */
-    /*     goto ax_error; */
-    /* } */
+    build_example(ax, 20);
 
     for (;;) {
         SDL_Event ev;
@@ -182,7 +162,7 @@ int main(int argc, char** argv)
         sprintf(set_dim_msg, "(set-dim %d %d)", win_w, win_h);
         if (ax_read(ax, set_dim_msg) != 0) { goto ax_error; }
 
-        const struct ax_drawbuf* draw = ax_draw(ax);
+        const struct ax_draw_buf* draw = ax_draw(ax);
         for (size_t i = 0; i < draw->len; i++) {
             struct ax_draw d = draw->data[i];
             switch (d.ty) {

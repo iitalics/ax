@@ -1,6 +1,5 @@
 #pragma once
 
-
 enum char_class {
     C_DELIMIT_MASK = 1,
     C_DECIMAL_MASK = 2,

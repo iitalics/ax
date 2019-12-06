@@ -1,17 +1,16 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include "ax.h"
-#include "utils.h"
-#include "node.h"
-#include "text.h"
 
+#define AX_DEFINE_TRAVERSAL_MACROS
+#include "text.h"
+#include "../geom.h"
+#include "../tree.h"
+#include "../backend.h"
+#include "../utils.h"
 
 #define MAIN(_d) (_d).w
 #define CROSS(_d) (_d).h
 #define MAX(_x, _y) (((_x) > (_y)) ? (_x) : (_y))
 #define MIN(_x, _y) ((_x) < (_y)) ? (_x) : (_y)
-
 
 static size_t ax_n_children(struct ax_tree* tree, const struct ax_node* node)
 {
@@ -353,11 +352,11 @@ static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
 }
 
 
-void ax__compute_geometry(struct ax_tree* tr, struct ax_aabb aabb)
+void ax__layout(struct ax_tree* tr, struct ax_geom* g)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, node);
 
-    ax_root(tr)->avail = aabb.s;
+    ax__root(tr)->avail = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
         ax_propagate_available_size(tr, node);
     }
@@ -366,12 +365,12 @@ void ax__compute_geometry(struct ax_tree* tr, struct ax_aabb aabb)
         ax_compute_hypothetical_size(tr, node);
     }
 
-    ax_root(tr)->target = aabb.s;
+    ax__root(tr)->target = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
         ax_resolve_target_size(tr, node);
     }
 
-    ax_root(tr)->coord = aabb.o;
+    ax__root(tr)->coord = AX_POS(0.0, 0.0);
     FOR_EACH_FROM_TOP(node) {
         ax_place_coords(tr, node);
     }

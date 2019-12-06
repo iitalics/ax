@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "text.h"
-#include "utils.h"
 
+#include "text.h"
+#include "../backend.h"
+#include "../utils.h"
 
 static ax_length ax_dummy_measure_fn(const char* str, void* ud)
 {

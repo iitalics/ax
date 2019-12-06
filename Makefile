@@ -1,25 +1,20 @@
-c_srcs = $(wildcard src/*.c)
-c_hdr_srcs = $(wildcard src/*.h)
-c_objs = $(c_srcs:src/%=_build/%.o)
-gen = _build/parser_rules.inc
+cc				= gcc
+cpp				= ${cc} -E
+rkt 			= racket
+cc_flags		= -std=c99 -g -Wall -Werror=implicit-function-declaration
+sdl_link_flags	= $(shell pkg-config -libs sdl2 SDL2_ttf)
 
-cc = gcc
-cpp = ${cc} -E
-c_flags = -Wall -std=c99 -g
+find_srcs		= find src -name '*.c'
+srcs			= $(shell ${find_srcs})
+gen				= _build/parser_rules.inc
+test_srcs		= $(wildcard test/test_*.c)
+test_gen		= _build/run_tests.inc
+objs			= $(shell ${find_srcs} | sed -e 's/src\/\(.*\)\//_build\/S\1__/;s/$$/.o/')
 
-c_sdl_test_srcs  = test/sdl_test.c
-c_sdl_test_flags = ${c_flags} $(shell pkg-config -libs sdl2 SDL2_ttf)
 
-c_test_srcs  = $(wildcard test/main.c test/test_*.c)
-c_test_flags = ${c_flags}
-test_gen   = _build/tests.inc
+# make commands
 
-etags = etags
-tags_srcs = ${c_srcs} ${c_hdr_srcs} ${c_test_srcs}
-
-rkt = racket
-
-all: ax_test ax_sdl_test
+all: ax_test # ax_sdl_test
 
 clean:
 	test -d _build && rm -rf _build
@@ -27,46 +22,54 @@ clean:
 
 rebuild: clean all
 
-ax_sdl_test: ${c_sdl_test_srcs} ${gen} ${c_objs}
-	${cc} ${c_sdl_test_flags} ${c_objs} ${c_sdl_test_srcs} -o $@
+run_test: ./ax_test
+	./$<
 
-run_sdl_test: ax_sdl_test
-	./ax_sdl_test
-
-ax_test: ${c_test_srcs} ${test_gen} ${gen} ${c_objs}
-	${cc} ${c_test_flags} ${c_objs} ${c_test_srcs} -o $@
-
-run_test: ax_test
-	./ax_test ${test_args}
-
-TAGS: ${tags_srcs}
-	${etags} ${tags_srcs}
-
-_build:
-	mkdir _build
-
-include $(wildcard _build/*.dep)
-
-_build/%.c.o: src/%.c
-	@mkdir -p _build
-	@${cpp} -MQ $@ -MM $< -o $(<:src/%.c=_build/%.c.dep)
-	${cc} ${c_flags} -c -o $@ $<
-
-_build/tests.inc: ${c_test_srcs}
-	@mkdir -p _build
-	${rkt} scripts/find-tests.rkt $(wildcard test/test_*.c) > $@
-
-_build/parser_rules.inc: scripts/rules.rkt scripts/sexp-yacc.rkt
-	@mkdir -p _build
-	${rkt} $< > $@
-
-.PHONY: all clean rebuild run_test run_sdl_test
-
+run_sdl_test: ./ax_sdl_test
+	./$<
 
 c: clean
 
-re: rebuild
+r: rebuild
 
 t: run_test
 
-.PHONY: c re t
+st: run_sdl_test
+
+
+# executables
+
+ax_test: ${gen} ${test_gen} ${test_srcs} ${objs} test/main.c
+	@echo CC test/main.c
+	@${cc} ${cc_flags} ${objs} ${test_srcs} test/main.c -o $@
+
+ax_sdl_test: ${gen} ${objs} test/sdl_main.c
+	@echo CC test/sdl_main.c
+	@${cc} ${sdl_link_flags} ${cc_flags} ${objs} test/sdl_main.c -o $@
+
+
+# objects and generated files
+
+include $(wildcard _build/*.dep)
+
+_build/S%: obj = $@
+_build/S%: dep = $(shell echo ${obj} | sed -e 's/\.o/.dep/')
+_build/S%: src = $(shell echo ${obj} | sed -e 's/_build\/S\([^_]*\)__/src\/\1\//;s/\.o//')
+_build/S%: src
+	@mkdir -p _build
+	@${cpp} -MQ ${obj} -MM ${src} -o ${dep}
+	@echo CC ${src}
+	@${cc} ${cc_flags} -c -o ${obj} ${src}
+
+_build/parser_rules.inc: scripts/rules.rkt scripts/sexp-yacc.rkt
+	@mkdir -p _build
+	@echo SCRIPT $<
+	@${rkt} $< > $@
+
+_build/run_tests.inc: scripts/find-tests.rkt ${test_srcs}
+	@mkdir -p _build
+	@echo SCRIPT $<
+	@${rkt} scripts/find-tests.rkt ${test_srcs} > $@
+
+
+.PHONY: all clean rebuild run_test run_sdl_test c r t st

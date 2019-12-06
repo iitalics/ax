@@ -1,7 +1,6 @@
 #include <setjmp.h>
 #include "helpers.h"
 
-
 char _ax_test_fail_reason[1024] = {0};
 char _ax_test_fail_loc[256] = {0};
 
@@ -72,7 +71,7 @@ int main(int argc, char** argv)
                  argc, argv); } while(0)
     printf("----------------------\n");
 
-#include "../_build/tests.inc"
+#include "../_build/run_tests.inc"
 
     printf("----------------------\n"
            "Results:\n"

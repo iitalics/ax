@@ -1,7 +1,7 @@
 #include "helpers.h"
-#include "../src/text.h"
+#include "../src/geom/text.h"
 #include "../src/utils.h"
-
+#include "../src/backend.h"
 
 void ax__measure_text(
     void* ud,

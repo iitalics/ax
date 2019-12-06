@@ -1,32 +1,31 @@
 #include "helpers.h"
 #include "../src/ax.h"
+#include "../src/draw.h"
 #include "../src/utils.h"
 
-
 #define D(_idx) d->data[_idx]
-
 
 TEST(color_to_rgb)
 {
     uint8_t rgb[3];
     memset(rgb, 0, 3);
-    CHECK_TRUE(ax_color_rgb(0x123456, rgb));
+    CHECK_TRUE(ax_color_to_rgb(0x123456, rgb));
     CHECK_IEQ_HEX(rgb[0], 0x12);
     CHECK_IEQ_HEX(rgb[1], 0x34);
     CHECK_IEQ_HEX(rgb[2], 0x56);
-    CHECK_TRUE(ax_color_rgb(0xffffff, rgb));
+    CHECK_TRUE(ax_color_to_rgb(0xffffff, rgb));
     CHECK_IEQ_HEX(rgb[0], 0xff);
     CHECK_IEQ_HEX(rgb[1], 0xff);
     CHECK_IEQ_HEX(rgb[2], 0xff);
 
-    CHECK_FALSE(ax_color_rgb(AX_NULL_COLOR, rgb));
-    CHECK_FALSE(ax_color_rgb(0x8123456, rgb));
+    CHECK_FALSE(ax_color_to_rgb(AX_NULL_COLOR, rgb));
+    CHECK_FALSE(ax_color_to_rgb(0x8123456, rgb));
 }
 
 TEST(color_from_rgb)
 {
     uint8_t rgb[3] = { 0x12, 0x34, 0x56 };
-    CHECK_IEQ_HEX(ax_rgb_color(rgb), 0x123456);
+    CHECK_IEQ_HEX(ax_color_from_rgb(rgb), 0x123456);
 }
 
 TEST(draw_1r)
@@ -36,7 +35,7 @@ TEST(draw_1r)
             "(set-dim 200 200)"
             "(set-root (rect (fill \"ff0033\") (size 60 80)))");
 
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 1);
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ(D(0).r.fill, 0xff0033);
@@ -67,7 +66,7 @@ TEST(draw_3r)
     //
     //   (see `./reference_draw_3r.html`)
     //
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 3);
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ_HEX(D(0).r.fill, 0xff0000);
@@ -93,7 +92,7 @@ TEST(draw_3r_colors)
             "                      (rect (fill none))"
             "                      (rect (fill (rgb 100 200 50))))))");
 
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 3);
     CHECK_IEQ_HEX(D(0).r.fill, 0x123456);
     CHECK_TRUE(AX_COLOR_IS_NULL(D(1).r.fill));
@@ -109,7 +108,7 @@ TEST(draw_text_1l)
             "                (color \"111111\")"
             "                (font \"size:10\")))");
 
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 1);
     CHECK_IEQ(D(0).ty, AX_DRAW_TEXT);
     CHECK_IEQ_HEX(D(0).t.color, 0x111111);
@@ -128,7 +127,7 @@ TEST(draw_text_2l)
             "                (color \"111111\")"
             "                (font \"size:10\")))");
 
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 2);
     CHECK_IEQ(D(0).ty, AX_DRAW_TEXT);
     CHECK_IEQ_HEX(D(0).t.color, 0x111111);
@@ -153,7 +152,7 @@ TEST(draw_2r_bg)
             " (container (children (rect (fill \"ff0000\") (size 60 60))"
             "                      (rect (fill \"0000ff\") (size 60 60)))"
             "            (background \"00ff00\")))");
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 3);
     // container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
@@ -185,7 +184,7 @@ TEST(draw_nested_bg)
             "                       (background \"ff00ff\"))"
             "                      (rect (fill \"0000ff\") (size 60 60)))"
             "            (background \"ffff00\")))");
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 5);
     // outer container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
@@ -227,7 +226,7 @@ TEST(draw_nested_2_bg)
             "                                 (rect (fill \"00ff00\") (size 60 20)))"
             "                       (background \"ff00ff\")))"
             "            (background \"ffff00\")))");
-    const struct ax_drawbuf* d = ax_draw(s);
+    const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 5);
     // outer container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);

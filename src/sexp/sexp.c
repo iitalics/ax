@@ -1,7 +1,7 @@
 #include <ctype.h>
-#include "sexp.h"
-#include "sexp_chars.h"
-#include "utils.h"
+#include "chars.h"
+#include "../sexp.h"
+#include "../utils.h"
 
 enum state {
     S_NOTHING = 0,
@@ -14,7 +14,7 @@ enum state {
 
 #define NO_SUCH_STATE() NO_SUCH_TAG("ax_parser_state")
 
-void ax__parser_init(struct ax_parser* p)
+void ax__init_parser(struct ax_parser* p)
 {
     p->state = S_NOTHING;
     p->len = 0;
@@ -25,7 +25,7 @@ void ax__parser_init(struct ax_parser* p)
     memset(p->str, 0xff, p->cap); // try to prevent silent failure
 }
 
-void ax__parser_free(struct ax_parser* p)
+void ax__free_parser(struct ax_parser* p)
 {
     free(p->str);
 }

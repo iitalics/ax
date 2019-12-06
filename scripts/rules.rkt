@@ -5,7 +5,7 @@
        #:before "ax_interp_begin_log(it);\n"
        (set-dim <len> <len>)
        #:before "ax_interp_begin_dim(it);\n"
-       #:after "ax_set_dimensions(s, it->dim);\n"
+       #:after "ax_interp_set_dim(s, it);\n"
        (set-root <node>)
        #:after "ax_interp_set_root(s, it);\n"]
 

@@ -1,7 +1,6 @@
 #include "helpers.h"
 #include "../src/sexp.h"
-#include "../src/sexp_chars.h"
-
+#include "../src/sexp/chars.h"
 
 TEST(sexp_chars)
 {
@@ -52,7 +51,7 @@ static char* sexp_readout(const char* input)
     out += sprintf(out, "{");
     struct ax_parser p;
     enum ax_parse r;
-    ax__parser_init(&p);
+    ax__init_parser(&p);
     for (bool end = false; !end; ) {
         if (inp >= inp_end) {
             end = true;
@@ -77,7 +76,7 @@ static char* sexp_readout(const char* input)
     } else {
         sprintf(out - 1, "}");
     }
-    ax__parser_free(&p);
+    ax__free_parser(&p);
     return out_start;
 }
 
