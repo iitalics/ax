@@ -4,12 +4,16 @@ rkt 			= racket
 cc_flags		= -std=c99 -g -Wall -Werror=implicit-function-declaration
 sdl_link_flags	= $(shell pkg-config -libs sdl2 SDL2_ttf)
 
-find_srcs		= find src -name '*.c'
 srcs			= $(shell ${find_srcs})
 gen				= _build/parser_rules.inc
 test_srcs		= $(wildcard test/test_*.c)
 test_gen		= _build/run_tests.inc
-objs			= $(shell ${find_srcs} | sed -e 's/src\/\(.*\)\//_build\/S\1__/;s/$$/.o/')
+objs			= $(shell ${find_srcs} | ${sed_src2obj})
+
+find_srcs	= find src -name '*.c'
+sed_src2obj = sed -e 's/src\/\(.*\)\//_build\/src__\1__/;s/$$/.o/'
+sed_obj2src = sed -e 's/_build\/src__\([^_]*\)__/src\/\1\//;s/\.o//'
+sed_2dep    = sed -e 's/$$/.dep/'
 
 
 # make commands
@@ -52,10 +56,10 @@ ax_sdl_test: ${gen} ${objs} test/sdl_main.c
 
 include $(wildcard _build/*.dep)
 
-_build/S%: obj = $@
-_build/S%: dep = $(shell echo ${obj} | sed -e 's/\.o/.dep/')
-_build/S%: src = $(shell echo ${obj} | sed -e 's/_build\/S\([^_]*\)__/src\/\1\//;s/\.o//')
-_build/S%: src
+_build/src__%: obj = $@
+_build/src__%: dep = $(shell echo ${obj} | ${sed_2dep})
+_build/src__%: src = $(shell echo ${obj} | ${sed_obj2src})
+_build/src__%: src
 	@mkdir -p _build
 	@${cpp} -MQ ${obj} -MM ${src} -o ${dep}
 	@echo CC ${src}
