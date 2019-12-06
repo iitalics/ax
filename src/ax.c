@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "node.h"
+#include "desc.h"
 #include "state.h"
 
 
@@ -12,13 +13,6 @@ extern void ax__redraw(struct ax_tree* tr, struct ax_drawbuf* db);
 extern struct ax_drawbuf* ax__create_drawbuf();
 extern void ax__free_drawbuf(struct ax_drawbuf* db);
 
-static void ax_init_tree(struct ax_tree* tr)
-{
-    tr->count = 0;
-    tr->capacity = 512;
-    tr->nodes = malloc(sizeof(struct ax_node) * tr->capacity);
-    ASSERT(tr->nodes != NULL, "malloc ax_tree.nodes");
-}
 
 static struct ax_desc* ax_reverse_flex_children(struct ax_desc* init_desc)
 {
@@ -30,6 +24,14 @@ static struct ax_desc* ax_reverse_flex_children(struct ax_desc* init_desc)
         first = last;
     }
     return first;
+}
+
+static void ax_init_tree(struct ax_tree* tr)
+{
+    tr->count = 0;
+    tr->capacity = 512;
+    tr->nodes = malloc(sizeof(struct ax_node) * tr->capacity);
+    ASSERT(tr->nodes != NULL, "malloc ax_tree.nodes");
 }
 
 static node_id ax_build_node(struct ax_tree* tr, const struct ax_desc* desc)
@@ -196,18 +198,13 @@ static void ax_invalidate(struct ax_state* s)
     ax__redraw(&s->tree, s->draw_buf);
 }
 
-void ax_set_dimensions(struct ax_state* s, struct ax_dim dim)
+static void ax_set_dimensions(struct ax_state* s, struct ax_dim dim)
 {
     s->root_dim = dim;
     ax_invalidate(s);
 }
 
-struct ax_dim ax_get_dimensions(struct ax_state* s)
-{
-    return s->root_dim;
-}
-
-void ax_set_root(struct ax_state* s, const struct ax_desc* root_desc)
+static void ax_set_root(struct ax_state* s, const struct ax_desc* root_desc)
 {
     ax_reset_tree(&s->tree);
     ax_tree_set_root(&s->tree, root_desc);
@@ -347,7 +344,7 @@ static void ax_interp_begin_node(struct ax_interp* it, enum ax_node_type ty)
         };
         break;
     case AX_NODE_RECTANGLE:
-        desc->r = (struct ax_desc_r) {
+        desc->r = (struct ax_rect) {
             .fill = 0x000000,
             .size = AX_DIM(0.0, 0.0),
         };

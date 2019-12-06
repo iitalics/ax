@@ -38,7 +38,7 @@ struct ax_node {
     enum ax_justify cross_justify;
     union {
         struct ax_node_c c;
-        struct ax_desc_r r;
+        struct ax_rect r;
         struct ax_node_t t;
     };
 
