@@ -31,9 +31,9 @@ TEST(color_from_rgb)
 TEST(draw_1r)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root (rect (fill \"ff0033\") (size 60 80)))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root (rect (fill \"ff0033\") (size 60 80)))");
 
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 1);
@@ -47,14 +47,14 @@ TEST(draw_1r)
 TEST(draw_3r)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root"
-            " (container (children (rect (fill \"ff0000\") (size 60 60))"
-            "                      (rect (fill \"00ff00\") (size 20 20))"
-            "                      (rect (fill \"0000ff\") (size 60 60)))"
-            "            (main-justify between)"
-            "            (cross-justify center)))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root"
+             " (container (children (rect (fill \"ff0000\") (size 60 60))"
+             "                      (rect (fill \"00ff00\") (size 20 20))"
+             "                      (rect (fill \"0000ff\") (size 60 60)))"
+             "            (main-justify between)"
+             "            (cross-justify center)))");
     //
     //   +--------------+
     //   |              |
@@ -86,11 +86,11 @@ TEST(draw_3r)
 TEST(draw_3r_colors)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-root"
-            " (container (children (rect (fill \"123456\"))"
-            "                      (rect (fill none))"
-            "                      (rect (fill (rgb 100 200 50))))))");
+    ax_write(s,
+             "(set-root"
+             " (container (children (rect (fill \"123456\"))"
+             "                      (rect (fill none))"
+             "                      (rect (fill (rgb 100 200 50))))))");
 
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 3);
@@ -102,11 +102,11 @@ TEST(draw_3r_colors)
 TEST(draw_text_1l)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root (text \"Hello, world\""
-            "                (color \"111111\")"
-            "                (font \"size:10\")))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root (text \"Hello, world\""
+             "                (color \"111111\")"
+             "                (font \"size:10\")))");
 
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 1);
@@ -121,11 +121,11 @@ TEST(draw_text_1l)
 TEST(draw_text_2l)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 100 100)"
-            "(set-root (text \"Hello, world\""
-            "                (color \"111111\")"
-            "                (font \"size:10\")))");
+    ax_write(s,
+             "(set-dim 100 100)"
+             "(set-root (text \"Hello, world\""
+             "                (color \"111111\")"
+             "                (font \"size:10\")))");
 
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 2);
@@ -146,7 +146,7 @@ TEST(draw_text_2l)
 TEST(draw_2r_bg)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
+    ax_write(s,
             "(set-dim 200 200)"
             "(set-root"
             " (container (children (rect (fill \"ff0000\") (size 60 60))"
@@ -175,15 +175,15 @@ TEST(draw_2r_bg)
 TEST(draw_nested_bg)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root"
-            " (container (children (container"
-            "                       (children (rect (fill \"ff0000\") (size 60 60))"
-            "                                 (rect (fill \"00ff00\") (size 60 20)))"
-            "                       (background \"ff00ff\"))"
-            "                      (rect (fill \"0000ff\") (size 60 60)))"
-            "            (background \"ffff00\")))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root"
+             " (container (children (container"
+             "                       (children (rect (fill \"ff0000\") (size 60 60))"
+             "                                 (rect (fill \"00ff00\") (size 60 20)))"
+             "                       (background \"ff00ff\"))"
+             "                      (rect (fill \"0000ff\") (size 60 60)))"
+             "            (background \"ffff00\")))");
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 5);
     // outer container
@@ -217,15 +217,15 @@ TEST(draw_nested_bg)
 TEST(draw_nested_2_bg)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root"    // blue rect is before inner container
-            " (container (children (rect (fill \"0000ff\") (size 60 60))"
-            "                      (container"
-            "                       (children (rect (fill \"ff0000\") (size 60 60))"
-            "                                 (rect (fill \"00ff00\") (size 60 20)))"
-            "                       (background \"ff00ff\")))"
-            "            (background \"ffff00\")))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root"    // blue rect is before inner container
+             " (container (children (rect (fill \"0000ff\") (size 60 60))"
+             "                      (container"
+             "                       (children (rect (fill \"ff0000\") (size 60 60))"
+             "                                 (rect (fill \"00ff00\") (size 60 20)))"
+             "                       (background \"ff00ff\")))"
+             "            (background \"ffff00\")))");
     const struct ax_draw_buf* d = ax_draw(s);
     CHECK_SZEQ(d->len, (size_t) 5);
     // outer container

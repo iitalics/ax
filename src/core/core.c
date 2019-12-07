@@ -60,14 +60,14 @@ const struct ax_draw_buf* ax_draw(struct ax_state* s)
     return s->draw_buf;
 }
 
-void ax_read_start(struct ax_state* s)
+void ax_write_start(struct ax_state* s)
 {
     ax__init_interp(s->interp);
     ax__free_interp(s->interp);
     ax__parser_eof(s->parser);
 }
 
-int ax_read_chunk(struct ax_state* s, const char* input)
+int ax_write_chunk(struct ax_state* s, const char* input)
 {
     char* acc = (char*) input;
     char const* end = input + strlen(input);
@@ -83,7 +83,7 @@ int ax_read_chunk(struct ax_state* s, const char* input)
     return 0;
 }
 
-int ax_read_end(struct ax_state* s)
+int ax_write_end(struct ax_state* s)
 {
     enum ax_parse p = ax__parser_eof(s->parser);
     return ax__interp(s, s->interp, s->parser, p);

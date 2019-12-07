@@ -62,7 +62,7 @@ static int build_example(struct ax_state* ax, size_t n)
                  " multi-line))");
     printf("(%zu bytes)\n", s - buf);
     printf("%s\n", buf);
-    return ax_read(ax, buf);
+    return ax_write(ax, buf);
 }
 
 /*
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 
         char set_dim_msg[128];
         sprintf(set_dim_msg, "(set-dim %d %d)", win_w, win_h);
-        if (ax_read(ax, set_dim_msg) != 0) { goto ax_error; }
+        if (ax_write(ax, set_dim_msg) != 0) { goto ax_error; }
 
         const struct ax_draw_buf* draw = ax_draw(ax);
         for (size_t i = 0; i < draw->len; i++) {

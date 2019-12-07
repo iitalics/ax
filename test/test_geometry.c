@@ -20,10 +20,10 @@ TEST(empty_root_node)
 TEST(build_tree)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root"
-            " (container (children " TWO_RECTS ")))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root"
+             " (container (children " TWO_RECTS ")))");
     CHECK_SZEQ(s->tree->count, (size_t) 3);
     CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
     CHECK_IEQ(N(1)->ty, AX_NODE_RECTANGLE);
@@ -37,11 +37,11 @@ TEST(build_tree)
 
 #define JUSTIFY_TEST_2R(_mj, _xj, _x0, _y0, _x1, _y1) do {          \
         struct ax_state* s = ax_new_state();                        \
-        ax_read(s,                                                  \
-                "(set-dim 200 200)"                                 \
-                "(set-root (container (children " TWO_RECTS ")"     \
-                "                     (main-justify " _mj ")"       \
-                "                     (cross-justify " _xj ")))");  \
+        ax_write(s,                                                 \
+                 "(set-dim 200 200)"                                \
+                 "(set-root (container (children " TWO_RECTS ")"    \
+                 "                     (main-justify " _mj ")"      \
+                 "                     (cross-justify " _xj ")))"); \
         CHECK_POSEQ(N(1)->coord, AX_POS(_x0, _y0));                 \
         CHECK_POSEQ(N(2)->coord, AX_POS(_x1, _y1));                 \
         ax_destroy_state(s);                                        \
@@ -72,12 +72,12 @@ TEST(main_justify_around_2r)
 
 #define TEXT_TEST(_aw, _ah, _fsz, _str, _expw, _exph)   \
     struct ax_state* s = ax_new_state();                \
-    ax_read(s,                                          \
-            "(set-dim " # _aw " " # _ah ")"             \
-            "(set-root"                                 \
-            " (text \"" _str "\""                       \
-            "       (font \"size:" # _fsz "\")))");     \
-    CHECK_SZEQ(s->tree->count, (size_t) 1);              \
+    ax_write(s,                                         \
+             "(set-dim " # _aw " " # _ah ")"            \
+             "(set-root"                                \
+             " (text \"" _str "\""                      \
+             "       (font \"size:" # _fsz "\")))");    \
+    CHECK_SZEQ(s->tree->count, (size_t) 1);             \
     CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                  \
     CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw)); \
     CHECK_FLEQ(0.001, N(0)->hypoth.h, (float) (_exph)); \
@@ -98,7 +98,7 @@ TEST(text_geom_3w_2l)
 TEST(spill_3r)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
+    ax_write(s,
             "(set-dim 200 200)"
             "(set-root"
             " (container"
@@ -118,7 +118,7 @@ TEST(spill_3r)
 TEST(shrink_3r)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
+    ax_write(s,
             "(set-dim 200 200)"
             "(set-root"
             " (container"
@@ -141,14 +141,14 @@ TEST(shrink_3r)
 TEST(shrink_3r_asym)
 {
     struct ax_state* s = ax_new_state();
-    ax_read(s,
-            "(set-dim 200 200)"
-            "(set-root"
-            " (container"
-            "  (children (rect (fill \"ff0000\") (size 80 80) (shrink 0))"
-            "            (rect (fill \"00ff00\") (size 80 80))"
-            "            (rect (fill \"0000ff\") (size 80 80)))"
-            "  single-line))");
+    ax_write(s,
+             "(set-dim 200 200)"
+             "(set-root"
+             " (container"
+             "  (children (rect (fill \"ff0000\") (size 80 80) (shrink 0))"
+             "            (rect (fill \"00ff00\") (size 80 80))"
+             "            (rect (fill \"0000ff\") (size 80 80)))"
+             "  single-line))");
     CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);

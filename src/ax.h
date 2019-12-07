@@ -18,18 +18,18 @@ extern const char* ax_get_error(struct ax_state* s);
  * S-exp interface
  */
 
-extern void ax_read_start(struct ax_state* s);
-extern int ax_read_chunk(struct ax_state* s, const char* input);
-extern int ax_read_end(struct ax_state* s);
+extern void ax_write_start(struct ax_state* s);
+extern int ax_write_chunk(struct ax_state* s, const char* input);
+extern int ax_write_end(struct ax_state* s);
 
-static inline int ax_read(struct ax_state* s, const char* input)
+static inline int ax_write(struct ax_state* s, const char* input)
 {
-    ax_read_start(s);
+    ax_write_start(s);
     int r;
-    if ((r = ax_read_chunk(s, input)) != 0) {
+    if ((r = ax_write_chunk(s, input)) != 0) {
         return r;
     }
-    return ax_read_end(s);
+    return ax_write_end(s);
 }
 
 /*
