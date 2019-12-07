@@ -3,6 +3,7 @@
 #include <SDL2/SDL_ttf.h>
 
 #include "../src/ax.h"
+#include "../src/core.h"
 #include "../src/draw.h"
 #include "../src/backend.h"
 #include "../src/utils.h"
@@ -11,31 +12,16 @@
  * Utils
  */
 
-ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax)
-{
-    uint8_t rgb0[3], rgb1[3], rgbL[3];
-    ax_color_to_rgb(c0, rgb0);
-    ax_color_to_rgb(c1, rgb1);
-    for (size_t i = 0; i < 3; i++) {
-        rgbL[i] = ((rgb1[i] - rgb0[i]) * t + rgb0[i] * tmax) / tmax;
-    }
-    return ax_color_from_rgb(rgbL);
-}
-
-SDL_Color ax__sdl_color(ax_color c)
-{
-    uint8_t rgb[3];
-    if (ax_color_to_rgb(c, rgb)) {
-        return (SDL_Color) {
-            .a = 0xff,
-            .r = rgb[0],
-            .g = rgb[1],
-            .b = rgb[2],
-        };
-    } else {
-        return (SDL_Color) { .a = 0 };
-    }
-}
+/* ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax) */
+/* { */
+/*     uint8_t rgb0[3], rgb1[3], rgbL[3]; */
+/*     ax_color_to_rgb(c0, rgb0); */
+/*     ax_color_to_rgb(c1, rgb1); */
+/*     for (size_t i = 0; i < 3; i++) { */
+/*         rgbL[i] = ((rgb1[i] - rgb0[i]) * t + rgb0[i] * tmax) / tmax; */
+/*     } */
+/*     return ax_color_from_rgb(rgbL); */
+/* } */
 
 /*
  * Demo
@@ -69,29 +55,203 @@ static int build_example(struct ax_state* ax, size_t n)
  * Implement backend
  */
 
-void* ax__create_font(const char* name)
+struct ax_backend {
+    SDL_Window* window;
+    SDL_Renderer* render;
+};
+
+void free_backend(struct ax_backend* b)
 {
-    // "size:<N>,path:<PATH>"
-    char* s = (char*) name;
-    ASSERT(strncmp(s, "size:", 5) == 0, "invalid font");
-    long size = strtol(s + 5, &s, 10);
-    ASSERT(strncmp(s, ",path:", 6) == 0, "invalid font");
-    char* path = s + 6;
-    return TTF_OpenFont(path, size);
+    if (b->render != NULL) {
+        SDL_DestroyRenderer(b->render);
+    }
+    if (b->window != NULL) {
+        SDL_DestroyWindow(b->window);
+    }
+    TTF_Quit();
+    SDL_Quit();
 }
 
-void ax__destroy_font(void* font)
+struct ax_backend* ax__create_backend(struct ax_state* ax)
 {
-    TTF_CloseFont(font);
+    struct ax_backend b = { .window = NULL, .render = NULL };
+
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        goto sdl_err;
+    }
+    if (TTF_Init() != 0) {
+        goto ttf_err;
+    }
+    if (SDL_CreateWindowAndRenderer(
+            (int) ax->config.win_size.w,
+            (int) ax->config.win_size.h,
+            SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN,
+            &b.window, &b.render) != 0) {
+        goto sdl_err;
+    }
+    if (SDL_SetRenderDrawBlendMode(b.render, SDL_BLENDMODE_BLEND) != 0) {
+        goto sdl_err;
+    }
+
+    struct ax_backend* bac = malloc(sizeof(struct ax_backend));
+    ASSERT(bac != NULL, "malloc ax_backend (SDL)");
+    *bac = b;
+    return bac;
+
+ttf_err:
+    ax__set_error(ax, TTF_GetError());
+    goto cleanup;
+sdl_err:
+    ax__set_error(ax, SDL_GetError());
+    goto cleanup;
+cleanup:
+    free_backend(&b);
+    return NULL;
+}
+
+void ax__destroy_backend(struct ax_backend* bac)
+{
+    if (bac != NULL) {
+        free_backend(bac);
+        free(bac);
+    }
+}
+
+static SDL_Color ax_color_to_sdl(ax_color c)
+{
+    uint8_t rgb[3];
+    if (ax_color_to_rgb(c, rgb)) {
+        return (SDL_Color) {
+            .a = 0xff,
+            .r = rgb[0],
+            .g = rgb[1],
+            .b = rgb[2],
+        };
+    } else {
+        return (SDL_Color) { .a = 0 };
+    }
+}
+
+static int draw(struct ax_state* ax)
+{
+    SDL_SetRenderDrawColor(ax->backend->render, 0xff, 0xff, 0xff, 0xff);
+    SDL_RenderClear(ax->backend->render);
+
+    const struct ax_draw_buf* draw = ax_draw(ax);
+    for (size_t i = 0; i < draw->len; i++) {
+        struct ax_draw d = draw->data[i];
+        switch (d.ty) {
+
+        case AX_DRAW_RECT: {
+            SDL_Color color = ax_color_to_sdl(d.r.fill);
+            SDL_SetRenderDrawColor(ax->backend->render, color.r, color.g, color.b, color.a);
+            SDL_Rect r;
+            r.x = d.r.bounds.o.x;
+            r.y = d.r.bounds.o.y;
+            r.w = d.r.bounds.s.w;
+            r.h = d.r.bounds.s.h;
+            SDL_RenderFillRect(ax->backend->render, &r);
+            break;
+        }
+
+        case AX_DRAW_TEXT: {
+            SDL_Color fg = ax_color_to_sdl(d.t.color);
+            SDL_Surface* sf = TTF_RenderUTF8_Blended(d.t.font, d.t.text, fg);
+            if (sf == NULL) {
+                goto ttf_err;
+            }
+            SDL_Texture* tx = SDL_CreateTextureFromSurface(ax->backend->render, sf);
+            if (tx == NULL) {
+                SDL_FreeSurface(sf);
+                goto sdl_err;
+            }
+            SDL_Rect r;
+            r.x = d.t.pos.x;
+            r.y = d.t.pos.y;
+            r.w = sf->w;
+            r.h = sf->h;
+            SDL_RenderCopy(ax->backend->render, tx, NULL, &r);
+            SDL_DestroyTexture(tx);
+            SDL_FreeSurface(sf);
+            break;
+        }
+
+        default: NO_SUCH_TAG("ax_draw_type");
+        }
+    }
+
+    SDL_RenderPresent(ax->backend->render);
+    return 0;
+
+ttf_err:
+    ax__set_error(ax, TTF_GetError());
+    return 1;
+sdl_err:
+    ax__set_error(ax, SDL_GetError());
+    return 1;
+}
+
+int ax__event_loop(struct ax_state* ax)
+{
+    for (;;) {
+        SDL_Event ev;
+        while (SDL_PollEvent(&ev)) {
+            switch (ev.type) {
+            case SDL_QUIT:
+                return 0;
+            case SDL_KEYDOWN:
+                switch (ev.key.keysym.sym) {
+                case SDLK_q:
+                    return 0;
+                default: break;
+                }
+                break;
+            default: break;
+            }
+        }
+
+        int win_w, win_h;
+        SDL_GetWindowSize(ax->backend->window, &win_w, &win_h);
+        ax__set_dim(ax, AX_DIM(win_w, win_h));
+
+        int rv;
+        if ((rv = draw(ax)) != 0) {
+            return rv;
+        }
+        SDL_Delay(16);
+    }
+}
+
+struct ax_font* ax__create_font(struct ax_state* ax,
+                                const char* description)
+{
+    // "size:<N>,path:<PATH>"
+    char* s = (char*) description;
+    if (strncmp(s, "size:", 5) != 0) {
+        goto err;
+    }
+    long size = strtol(s + 5, &s, 10);
+    if (strncmp(s, ",path:", 6) != 0) {
+        goto err;
+    }
+    char* path = s + 6;
+    return (void*) TTF_OpenFont(path, size);
+err:
+    ax__set_error(ax, "invalid font description");
+    return NULL;
+}
+
+void ax__destroy_font(struct ax_font* font)
+{
+    TTF_CloseFont((void*) font);
 }
 
 void ax__measure_text(
-    void* font_voidptr,
+    struct ax_font* font_,
     const char* text,
     struct ax_text_metrics* tm)
 {
-    TTF_Font* font = font_voidptr;
-
+    TTF_Font* font = (void*) font_;
     int w_int;
     if (text == NULL) {
         w_int = 0;
@@ -104,136 +264,31 @@ void ax__measure_text(
     tm->width = w_int;
 }
 
+/*
+ * main
+ */
+
 int main(int argc, char** argv)
 {
     (void) argc, (void) argv;
     int rv;
 
-    SDL_Window* win = NULL;
-    SDL_Renderer* rn = NULL;
-    struct ax_state* ax = NULL;
+    struct ax_state* ax = ax_new_state();
 
-    const int width = 800;
-    const int height = 400;
-
-    SDL_Init(SDL_INIT_VIDEO);
-    if (SDL_CreateWindowAndRenderer(
-            width, height,
-            SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN,
-            &win, &rn) != 0) {
-        goto sdl_error;
-    }
-    SDL_SetRenderDrawBlendMode(rn, SDL_BLENDMODE_BLEND);
-
-    if (TTF_Init() != 0) {
-        goto ttf_error;
+    if ((rv = build_example(ax, 10)) != 0) {
+        goto err;
     }
 
-    ax = ax_new_state();
-    build_example(ax, 20);
-
-    for (;;) {
-        SDL_Event ev;
-        while (SDL_PollEvent(&ev)) {
-            switch (ev.type) {
-
-            case SDL_QUIT:
-                printf("quit event\n");
-                goto exit;
-
-            case SDL_KEYDOWN:
-                if (ev.key.keysym.sym == SDLK_q) {
-                    goto exit;
-                }
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        SDL_SetRenderDrawColor(rn, 0xff, 0xff, 0xff, 0xff);
-        SDL_RenderClear(rn);
-
-        int win_w, win_h;
-        SDL_GetWindowSize(win, &win_w, &win_h);
-
-        char set_dim_msg[128];
-        sprintf(set_dim_msg, "(set-dim %d %d)", win_w, win_h);
-        if (ax_write(ax, set_dim_msg) != 0) { goto ax_error; }
-
-        const struct ax_draw_buf* draw = ax_draw(ax);
-        for (size_t i = 0; i < draw->len; i++) {
-            struct ax_draw d = draw->data[i];
-            switch (d.ty) {
-
-            case AX_DRAW_RECT: {
-                SDL_Color color = ax__sdl_color(d.r.fill);
-                SDL_SetRenderDrawColor(rn, color.r, color.g, color.b, color.a);
-                SDL_Rect r;
-                r.x = d.r.bounds.o.x;
-                r.y = d.r.bounds.o.y;
-                r.w = d.r.bounds.s.w;
-                r.h = d.r.bounds.s.h;
-                SDL_RenderFillRect(rn, &r);
-                break;
-            }
-
-            case AX_DRAW_TEXT: {
-                SDL_Color fg = ax__sdl_color(d.t.color);
-                SDL_Surface* sf = TTF_RenderUTF8_Blended(d.t.font, d.t.text, fg);
-                if (sf == NULL) {
-                    goto ttf_error;
-                }
-                SDL_Texture* tx = SDL_CreateTextureFromSurface(rn, sf);
-                if (tx == NULL) {
-                    SDL_FreeSurface(sf);
-                    goto sdl_error;
-                }
-                SDL_Rect r;
-                r.x = d.t.pos.x;
-                r.y = d.t.pos.y;
-                r.w = sf->w;
-                r.h = sf->h;
-                SDL_RenderCopy(rn, tx, NULL, &r);
-                SDL_DestroyTexture(tx);
-                SDL_FreeSurface(sf);
-                break;
-            }
-
-            default: NO_SUCH_TAG("ax_draw_type");
-            }
-        }
-
-        SDL_RenderPresent(rn);
-        SDL_Delay(16);
+    if ((rv = ax__event_loop(ax)) != 0) {
+        goto err;
     }
 
-exit:
-    rv = 0;
     goto cleanup;
 
-ax_error:
-    printf("ERROR: %s\n", ax_get_error(ax));
-    rv = 1;
-    goto cleanup;
-
-sdl_error:
-    printf("ERROR: %s\n", SDL_GetError());
-    rv = 1;
-    goto cleanup;
-
-ttf_error:
-    printf("ERROR: %s\n", TTF_GetError());
-    rv = 1;
-    goto cleanup;
+err:
+    fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
 
 cleanup:
     ax_destroy_state(ax);
-    SDL_DestroyWindow(win);
-    if (TTF_WasInit()) {
-        TTF_Quit();
-    }
-    SDL_Quit();
     return rv;
 }

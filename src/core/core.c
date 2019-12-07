@@ -24,25 +24,32 @@ struct ax_state* ax_new_state()
     ASSERT(e != NULL, "malloc ax_state");
 
     struct ax_state* s = &e->s;
+
+    s->err_msg = NULL;
+    s->config = (struct ax_backend_config) {
+        .win_size = AX_DIM(800, 600),
+    };
+
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
     ax__init_tree(s->tree = &e->t);
     ax__init_geom(s->geom = &e->g);
     ax__init_draw_buf(s->draw_buf = &e->d);
     ax__set_root(s, &AX_DESC_EMPTY_CONTAINER);
-    s->err_msg = NULL;
+    s->backend = ax__create_backend(s);
     return s;
 }
 
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
-        free(s->err_msg);
         ax__free_draw_buf(s->draw_buf);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
         ax__free_interp(s->interp);
         ax__free_lexer(s->lexer);
+        ax__destroy_backend(s->backend);
+        free(s->err_msg);
         free(s);
     }
 }
@@ -114,7 +121,7 @@ void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 void ax__set_root(struct ax_state* s, const struct ax_desc* root)
 {
     ax__tree_clear(s->tree);
-    node_id r = ax__build_node(s->tree, root);
+    node_id r = ax__build_node(s, s->tree, root);
     ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root");
     invalidate(s);
 }
