@@ -7,7 +7,7 @@
 
 extern char _ax_test_fail_reason[1024];
 extern char _ax_test_fail_loc[256];
-extern void _ax_test_fail();
+void _ax_test_fail();
 
 extern const char* _ax_true_str;
 extern const char* _ax_false_str;

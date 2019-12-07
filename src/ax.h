@@ -5,22 +5,22 @@
  * Setup and teardown
  */
 
-extern struct ax_state* ax_new_state();
-extern void ax_destroy_state(struct ax_state* s);
+struct ax_state* ax_new_state();
+void ax_destroy_state(struct ax_state* s);
 
 /*
  * Basic operations
  */
 
-extern const char* ax_get_error(struct ax_state* s);
+const char* ax_get_error(struct ax_state* s);
 
 /*
  * S-exp interface
  */
 
-extern void ax_write_start(struct ax_state* s);
-extern int ax_write_chunk(struct ax_state* s, const char* input);
-extern int ax_write_end(struct ax_state* s);
+void ax_write_start(struct ax_state* s);
+int ax_write_chunk(struct ax_state* s, const char* input);
+int ax_write_end(struct ax_state* s);
 
 static inline int ax_write(struct ax_state* s, const char* input)
 {
@@ -36,4 +36,4 @@ static inline int ax_write(struct ax_state* s, const char* input)
  * Drawing
  */
 
-extern const struct ax_draw_buf* ax_draw(struct ax_state* s);
+const struct ax_draw_buf* ax_draw(struct ax_state* s);

@@ -18,9 +18,9 @@ struct ax_aabb { struct ax_pos o; struct ax_dim s; };
 #define AX_AABB(_x, _y, _w, _h) \
     ((struct ax_aabb) { .o = AX_POS(_x, _y), .d = AX_DIM(_w, _h) })
 
-extern bool ax_color_to_rgb(ax_color color, uint8_t* out_rgb);
+bool ax_color_to_rgb(ax_color color, uint8_t* out_rgb);
 
-extern ax_color ax_color_from_rgb(uint8_t* rgb);
+ax_color ax_color_from_rgb(uint8_t* rgb);
 
 
 /* Lost and found */

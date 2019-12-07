@@ -20,4 +20,4 @@ enum char_class {
     C_DOT        = 0x1000 | 32,
 };
 
-extern enum char_class ax__char_class(char c);
+enum char_class ax__char_class(char c);
