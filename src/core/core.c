@@ -111,6 +111,16 @@ int ax_write_end(struct ax_state* s)
     return ax__interp(s, s->interp, s->lexer, p);
 }
 
+int ax_write(struct ax_state* s, const char* input)
+{
+    ax_write_start(s);
+    int r;
+    if ((r = ax_write_chunk(s, input)) != 0) {
+        return r;
+    }
+    return ax_write_end(s);
+}
+
 static void invalidate(struct ax_state* s)
 {
     ax__layout(s->tree, s->geom);

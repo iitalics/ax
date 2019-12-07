@@ -23,16 +23,7 @@ const char* ax_get_error(struct ax_state* s);
 void ax_write_start(struct ax_state* s);
 int ax_write_chunk(struct ax_state* s, const char* input);
 int ax_write_end(struct ax_state* s);
-
-static inline int ax_write(struct ax_state* s, const char* input)
-{
-    ax_write_start(s);
-    int r;
-    if ((r = ax_write_chunk(s, input)) != 0) {
-        return r;
-    }
-    return ax_write_end(s);
-}
+int ax_write(struct ax_state* s, const char* input);
 
 /*
  * Drawing
