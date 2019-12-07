@@ -11,35 +11,27 @@ test_srcs	= $(wildcard test/test_*.c)
 test_gen	= _build/run_tests.inc
 objs		= $(shell ${find_srcs} | ${sed_src2obj})
 
-find_srcs	= find src -name '*.c'
+find_srcs	= find src -type f -name '*.c'
 sed_src2obj	= sed -e 's/src\/\(.*\)\//_build\/src__\1__/;s/$$/.o/'
 sed_obj2src	= sed -e 's/_build\/src__\([^_]*\)__/src\/\1\//;s/\.o//'
-sed_2dep	= sed -e 's/$$/.dep/'
+sed_obj2dep	= sed -e 's/\.c\.o$$/.dep/'
 
 
 # make commands
 
-all: ax_test # ax_sdl_test
+all: ax_test ax_sdl_test
 
-clean:
+c:
 	test -d _build && rm -rf _build
 	rm -f ax_test ax_sdl_test
 
-rebuild: clean all
-
-run_test: ./ax_test
+t: ax_test
 	./$<
 
-run_sdl_test: ./ax_sdl_test
+sdl_t: ax_sdl_test
 	./$<
 
-c: clean
-
-r: rebuild
-
-t: run_test
-
-st: run_sdl_test
+.PHONY: all c t sdl_t
 
 
 # executables
@@ -52,18 +44,17 @@ ax_sdl_test: ${gen} ${objs} test/sdl_main.c
 	@echo CC test/sdl_main.c
 	@${cc} ${sdl_link_flags} ${cc_flags} ${objs} test/sdl_main.c -o $@
 
-
 # objects and generated files
 
 include $(wildcard _build/*.dep)
 
-_build/src__%: obj = $@
-_build/src__%: dep = $(shell echo ${obj} | ${sed_2dep})
-_build/src__%: src = $(shell echo ${obj} | ${sed_obj2src})
-_build/src__%: src
+_build/src__%.o: obj = $@
+_build/src__%.o: dep = $(shell echo ${obj} | ${sed_obj2dep})
+_build/src__%.o: src = $(shell echo ${obj} | ${sed_obj2src})
+_build/src__%.o: ${src}
 	@mkdir -p _build
-	@${cpp} -MQ ${obj} -MM ${src} -o ${dep}
 	@echo CC ${src}
+	@${cpp} -MM -MT ${obj} -MF ${dep} ${src}
 	@${cc} ${cc_flags} -c -o ${obj} ${src}
 
 _build/parser_rules.inc: scripts/rules.rkt scripts/sexp-yacc.rkt
@@ -79,5 +70,3 @@ _build/run_tests.inc: scripts/find-tests.rkt ${test_srcs}
 TAGS: tags_srcs = $(shell find src test -name '*.c' -or -name '*.c' -or -name '*.h')
 TAGS: ${tags_srcs}
 	${etags} ${tags_srcs}
-
-.PHONY: all clean rebuild run_test run_sdl_test c r t st
