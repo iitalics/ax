@@ -1,7 +1,9 @@
 #pragma once
 #include "../base.h"
 
-typedef ax_length (*ax_text_measure_fn)(const char*, void*);
+struct ax_font;
+
+typedef ax_length (*ax_text_measure_fn)(const char*, struct ax_font*);
 
 struct ax_text_iter {
     const char* text;
@@ -30,6 +32,6 @@ struct ax_text_metrics {
 
 void ax__text_iter_init(struct ax_text_iter* ti, const char* text);
 void ax__text_iter_free(struct ax_text_iter* ti);
-void ax__text_iter_set_font(struct ax_text_iter* ti, void* font);
+void ax__text_iter_set_font(struct ax_text_iter* ti, struct ax_font* font);
 
 enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti);

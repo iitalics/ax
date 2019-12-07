@@ -67,9 +67,9 @@ TEST(text_linebreak_width)
 {
     struct ax_text_iter ti;
     enum ax_text_elem e;
+    struct ax_state* s = ax_new_state();
     ax__text_iter_init(&ti, "Foo bar baz bang. Superlongword.");
-    ax_length font_size = 10;
-    ax__text_iter_set_font(&ti, &font_size);
+    ax__text_iter_set_font(&ti, ax__create_font(s, "size:10"));
     ti.max_width = 80;
     e = ax__text_iter_next(&ti);
     CHECK_IEQ(e, AX_TEXT_WORD); CHECK_STREQ(ti.word, "Foo");
@@ -90,4 +90,5 @@ TEST(text_linebreak_width)
     e = ax__text_iter_next(&ti);
     CHECK_IEQ(e, AX_TEXT_END); CHECK_STREQ(ti.line, "Superlongword.");
     ax__text_iter_free(&ti);
+    ax_destroy_state(s);
 }
