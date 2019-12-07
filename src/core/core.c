@@ -88,7 +88,7 @@ int ax_write_end(struct ax_state* s)
     return ax__interp(s, s->interp, s->lexer, p);
 }
 
-void ax__invalidate(struct ax_state* s)
+static void invalidate(struct ax_state* s)
 {
     ax__layout(s->tree, s->geom);
     ax__redraw(s->tree, s->draw_buf);
@@ -97,7 +97,7 @@ void ax__invalidate(struct ax_state* s)
 void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 {
     s->geom->root_dim = dim;
-    ax__invalidate(s);
+    invalidate(s);
 }
 
 void ax__set_root(struct ax_state* s, const struct ax_desc* root)
@@ -105,5 +105,5 @@ void ax__set_root(struct ax_state* s, const struct ax_desc* root)
     ax__tree_clear(s->tree);
     node_id r = ax__build_node(s->tree, root);
     ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root");
-    ax__invalidate(s);
+    invalidate(s);
 }
