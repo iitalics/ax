@@ -37,12 +37,12 @@ sdl_t: ax_sdl_test
 # executables
 
 ax_test: ${gen} ${test_gen} ${test_srcs} ${objs} test/main.c
-	@echo CC test/main.c
+	@echo CC "test/main.c"
 	@${cc} ${cc_flags} ${objs} ${test_srcs} test/main.c -o $@
 
-ax_sdl_test: ${gen} ${objs} test/sdl_main.c
-	@echo CC test/sdl_main.c
-	@${cc} ${sdl_link_flags} ${cc_flags} ${objs} test/sdl_main.c -o $@
+ax_sdl_test: ${gen} ${objs} backend/sdl.c test/ui_main.c
+	@echo CC "test/ui_main.c (sdl)"
+	@${cc} ${sdl_link_flags} ${cc_flags} ${objs} backend/sdl.c test/ui_main.c -o $@
 
 # objects and generated files
 

@@ -61,6 +61,11 @@ void ax__set_error(struct ax_state* s, const char* err)
     strcpy(s->err_msg, err);
 }
 
+int ax_event_loop(struct ax_state* s)
+{
+    return ax__event_loop(s);
+}
+
 const char* ax_get_error(struct ax_state* s)
 {
     if (s->err_msg != NULL) {

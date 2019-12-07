@@ -12,6 +12,8 @@ void ax_destroy_state(struct ax_state* s);
  * Basic operations
  */
 
+int ax_event_loop(struct ax_state* s);
+
 const char* ax_get_error(struct ax_state* s);
 
 /*
