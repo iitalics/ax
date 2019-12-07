@@ -1,5 +1,6 @@
 cc		= gcc
 cpp		= ${cc} -E
+etags		= etags
 rkt 		= racket
 cc_flags	= -std=c99 -g -Wall -Werror=implicit-function-declaration
 sdl_link_flags	= $(shell pkg-config -libs sdl2 SDL2_ttf)
@@ -75,5 +76,8 @@ _build/run_tests.inc: scripts/find-tests.rkt ${test_srcs}
 	@echo SCRIPT $<
 	@${rkt} scripts/find-tests.rkt ${test_srcs} > $@
 
+TAGS: tags_srcs = $(shell find src test -name '*.c' -or -name '*.c' -or -name '*.h')
+TAGS: ${tags_srcs}
+	${etags} ${tags_srcs}
 
 .PHONY: all clean rebuild run_test run_sdl_test c r t st
