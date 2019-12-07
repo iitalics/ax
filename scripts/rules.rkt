@@ -3,6 +3,8 @@
 
 [<top> (log <str>)
        #:before "begin_log(it);\n"
+       (die <str>)
+       #:before "begin_die(it);\n"
        (set-dim <len> <len>)
        #:before "begin_dim(it);\n"
        #:after "set_dim(s, it);\n"
@@ -42,11 +44,11 @@
              (shrink <int>) #:before "begin_shrink(it);\n"
              (self-cross-justify <justify>) #:before "begin_self_justify(it);\n"]
 
-[<str> STR #:op "string(it, ~a);\n"]
-[<int> INT #:op "integer(it, ~a);\n"]
+[<str> STR #:op "string(s, it, ~a);\n"]
+[<int> INT #:op "integer(s, it, ~a);\n"]
 [<len> <int>]
-[<color> STR #:op "color_string(it, ~a);\n"
-         (rgb <int> <int> <int>) #:before "begin_rgb(it);\n"
+[<color> (rgb <int> <int> <int>) #:before "begin_rgb(it);\n"
+         <str>
          none #:op "color(it, AX_NULL_COLOR);\n"]
 
 [<justify> start #:op "justify(it, AX_JUSTIFY_START);\n"

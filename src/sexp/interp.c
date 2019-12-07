@@ -6,6 +6,7 @@
 enum ax_interp_mode {
     M_NONE = 0,
     M_LOG,
+    M_DIE,
     M_TEXT,
     M_FONT,
     M_FILL,
@@ -145,6 +146,7 @@ static void rect_set_size(struct ax_interp* it)
 }
 
 static void begin_log(struct ax_interp* it) { it->mode = M_LOG; }
+static void begin_die(struct ax_interp* it) { it->mode = M_DIE; }
 static void begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
 static void begin_fill(struct ax_interp* it) { it->mode = M_FILL; }
 static void begin_main_justify(struct ax_interp* it) { it->mode = M_MAIN_JUSTIFY; }
@@ -174,11 +176,14 @@ static void color(struct ax_interp* it, ax_color col)
     }
 }
 
-static void string(struct ax_interp* it, const char* str)
+static void string(struct ax_state* s, struct ax_interp* it, const char* str)
 {
     switch (it->mode) {
     case M_LOG:
         printf("[LOG] %s\n", str);
+        break;
+    case M_DIE:
+        ax__set_error(s, str);
         break;
     case M_TEXT:
         it->desc->t.text = malloc(strlen(str) + 1);
@@ -188,11 +193,18 @@ static void string(struct ax_interp* it, const char* str)
         it->desc->t.font_name = malloc(strlen(str) + 1);
         strcpy((char*) it->desc->t.font_name, str);
         break;
+    case M_FILL:
+    case M_TEXT_COLOR:
+    case M_BACKGROUND: {
+        ax_color col = strtol(str, NULL, 16);
+        color(it, col);
+        break;
+    }
     default: break;
     }
 }
 
-static void integer(struct ax_interp* it, long v)
+static void integer(struct ax_state* s, struct ax_interp* it, long v)
 {
     switch (it->mode) {
     case M_DIM_W:
@@ -201,7 +213,6 @@ static void integer(struct ax_interp* it, long v)
         break;
     case M_DIM_H:
         it->dim.h = v;
-        it->mode = M_NONE;
         //printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
         break;
     case M_GROW:
@@ -218,7 +229,6 @@ static void integer(struct ax_interp* it, long v)
         it->col.rgb[it->col.rgb_idx++] = v < 0 ? 0 : v > 255 ? 255 : v;
         if (it->col.rgb_idx >= 3) {
             color(it, ax_color_from_rgb(it->col.rgb));
-            it->mode = M_NONE;
         }
         break;
 
@@ -240,12 +250,6 @@ static void justify(struct ax_interp* it, enum ax_justify just)
         break;
     default: break;
     }
-}
-
-static void color_string(struct ax_interp* it, const char* str)
-{
-    ax_color col = strtol(str, NULL, 16);
-    color(it, col);
 }
 
 static void cont_set_single_line(struct ax_interp* it, bool s)

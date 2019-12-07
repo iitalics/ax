@@ -63,6 +63,7 @@ extern const char* _ax_false_str;
           (_lhs) ? _ax_true_str : _ax_false_str,    \
           (_rhs) ? _ax_true_str : _ax_false_str)
 
+#define CHECK_NULL(_ptr) CHECK_PEQ(_ptr, NULL)
 #define CHECK_TRUE(_x) CHECK_BEQ(_x, true)
 #define CHECK_FALSE(_x) CHECK_BEQ(_x, false)
 

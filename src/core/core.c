@@ -30,12 +30,14 @@ struct ax_state* ax_new_state()
     ax__init_geom(s->geom = &e->g);
     ax__init_draw_buf(s->draw_buf = &e->d);
     ax__set_root(s, &AX_DESC_EMPTY_CONTAINER);
+    s->err_msg = NULL;
     return s;
 }
 
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
+        free(s->err_msg);
         ax__free_draw_buf(s->draw_buf);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
@@ -45,12 +47,21 @@ void ax_destroy_state(struct ax_state* s)
     }
 }
 
+void ax__set_error(struct ax_state* s, const char* err)
+{
+    s->err_msg = malloc(strlen(err) + 1);
+    ASSERT(s->err_msg != NULL, "malloc ax_state.err_msg");
+    strcpy(s->err_msg, err);
+}
+
 const char* ax_get_error(struct ax_state* s)
 {
-    if (s->interp->err_msg != NULL) {
+    if (s->err_msg != NULL) {
+        return s->err_msg;
+    } if (s->interp->err_msg != NULL) {
         return s->interp->err_msg;
     } else {
-        return "(no error)";
+        return NULL;
     }
 }
 
