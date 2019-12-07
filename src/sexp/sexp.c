@@ -30,7 +30,7 @@ void ax__free_parser(struct ax_parser* p)
     free(p->str);
 }
 
-static void ax_push_char(struct ax_parser* p, char ch)
+static void push_char(struct ax_parser* p, char ch)
 {
     if (p->len + 1 >= p->cap) {
         p->cap *= 2;
@@ -40,7 +40,7 @@ static void ax_push_char(struct ax_parser* p, char ch)
     p->str[p->len++] = ch;
 }
 
-static void ax_nul_terminate(struct ax_parser* p)
+static void nul_term(struct ax_parser* p)
 {
     p->str[p->len] = '\0';
 }
@@ -71,7 +71,7 @@ enum char_class ax__char_class(char c)
     }
 }
 
-static enum ax_parse ax_bad_char_err(struct ax_parser* p, char c)
+static enum ax_parse bad_char_err(struct ax_parser* p, char c)
 {
     p->len = sprintf(p->str, "invalid character `%c'", c);
     p->err = AX_PARSE_ERROR_BAD_CHAR;
@@ -79,7 +79,7 @@ static enum ax_parse ax_bad_char_err(struct ax_parser* p, char c)
     return AX_PARSE_ERROR;
 }
 
-static enum ax_parse ax_extra_rparen_err(struct ax_parser* p)
+static enum ax_parse extra_rparen_err(struct ax_parser* p)
 {
     p->len = sprintf(p->str, "unexpected `)'");
     p->err = AX_PARSE_ERROR_EXTRA_RPAREN;
@@ -87,7 +87,7 @@ static enum ax_parse ax_extra_rparen_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
-static enum ax_parse ax_unmatch_lparen_err(struct ax_parser* p)
+static enum ax_parse unmatch_lparen_err(struct ax_parser* p)
 {
     p->len = sprintf(p->str, "unmatched `('");
     p->err = AX_PARSE_ERROR_UNMATCH_LPAREN;
@@ -95,7 +95,7 @@ static enum ax_parse ax_unmatch_lparen_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
-static enum ax_parse ax_unmatch_quote_err(struct ax_parser* p)
+static enum ax_parse unmatch_quote_err(struct ax_parser* p)
 {
     p->len = sprintf(p->str, "unmatched \"");
     p->err = AX_PARSE_ERROR_UNMATCH_QUOTE;
@@ -103,7 +103,7 @@ static enum ax_parse ax_unmatch_quote_err(struct ax_parser* p)
     return AX_PARSE_ERROR;
 }
 
-static enum ax_parse ax_end_state(struct ax_parser* p)
+static enum ax_parse end(struct ax_parser* p)
 {
     switch (p->state) {
     case S_NOTHING:
@@ -117,10 +117,10 @@ static enum ax_parse ax_end_state(struct ax_parser* p)
         return AX_PARSE_DOUBLE;
     case S_SYMBOL:
         p->state = S_NOTHING;
-        ax_nul_terminate(p);
+        nul_term(p);
         return AX_PARSE_SYMBOL;
     case S_QUOTE_STRING:
-        return ax_unmatch_quote_err(p);
+        return unmatch_quote_err(p);
     default: NO_SUCH_STATE();
     }
 }
@@ -129,21 +129,21 @@ enum ax_parse ax__parser_eof(struct ax_parser* p)
 {
     if (p->paren_depth > 0) {
         p->paren_depth = 0;
-        return ax_unmatch_lparen_err(p);
+        return unmatch_lparen_err(p);
     }
-    return ax_end_state(p);
+    return end(p);
 }
 
-static inline enum ax_parse ax_lparen(struct ax_parser* p)
+static inline enum ax_parse lparen(struct ax_parser* p)
 {
     p->paren_depth++;
     return AX_PARSE_LPAREN;
 }
 
-static inline enum ax_parse ax_rparen(struct ax_parser* p)
+static inline enum ax_parse rparen(struct ax_parser* p)
 {
     if (p->paren_depth == 0) {
-        return ax_extra_rparen_err(p);
+        return extra_rparen_err(p);
     } else {
         p->paren_depth--;
         return AX_PARSE_RPAREN;
@@ -154,18 +154,18 @@ static inline enum ax_parse ax_sym1(struct ax_parser* p, char ch)
 {
     ASSERT(ax__char_class(ch) & C_SYM1_MASK, "should be SYM1");
     ASSERT(p->state == S_SYMBOL, "should be in SYMBOL state");
-    ax_push_char(p, ch);
+    push_char(p, ch);
     return AX_PARSE_NOTHING;
 }
 
-static inline enum ax_parse ax_sym0(struct ax_parser* p, char ch)
+static inline enum ax_parse sym1(struct ax_parser* p, char ch)
 {
     ASSERT(ax__char_class(ch) & C_SYM0_MASK, "should be SYM0");
     switch (p->state) {
     case S_NOTHING:
         p->state = S_SYMBOL;
         p->len = 0;
-        ax_push_char(p, ch);
+        push_char(p, ch);
         return AX_PARSE_NOTHING;
 
     case S_SYMBOL:
@@ -173,7 +173,7 @@ static inline enum ax_parse ax_sym0(struct ax_parser* p, char ch)
         return AX_PARSE_NOTHING;
 
     case S_INTEGER:
-        return ax_bad_char_err(p, ch);
+        return bad_char_err(p, ch);
 
     case S_QUOTE_STRING: ASSERT(0, "should not be reachable");
     default: NO_SUCH_STATE();
@@ -182,7 +182,7 @@ static inline enum ax_parse ax_sym0(struct ax_parser* p, char ch)
 
 static inline long digit(char c) { return c - '0'; }
 
-static enum ax_parse ax_decimal(struct ax_parser* p, char ch)
+static enum ax_parse decimal_err(struct ax_parser* p, char ch)
 {
     ASSERT(ax__char_class(ch) & C_DECIMAL_MASK, "should be DEC");
     switch (p->state) {
@@ -206,27 +206,27 @@ static enum ax_parse ax_decimal(struct ax_parser* p, char ch)
     }
 }
 
-static enum ax_parse ax_quote(struct ax_parser* p)
+static enum ax_parse quote_err(struct ax_parser* p)
 {
     p->state = S_QUOTE_STRING;
     p->len = 0;
     return AX_PARSE_NOTHING;
 }
 
-static enum ax_parse ax_quoted_char(struct ax_parser* p, char ch)
+static enum ax_parse quoted_char(struct ax_parser* p, char ch)
 {
     ASSERT(p->state == S_QUOTE_STRING, "should be in QUOTE_STRING state");
     if (ch == '\"') {
         p->state = S_NOTHING;
-        ax_nul_terminate(p);
+        nul_term(p);
         return AX_PARSE_STRING;
     } else {
-        ax_push_char(p, ch);
+        push_char(p, ch);
         return AX_PARSE_NOTHING;
     }
 }
 
-static enum ax_parse ax_dot(struct ax_parser* p)
+static enum ax_parse dot_err(struct ax_parser* p)
 {
     switch (p->state) {
     case S_INTEGER:
@@ -239,7 +239,7 @@ static enum ax_parse ax_dot(struct ax_parser* p)
     case S_NOTHING:
     case S_SYMBOL:
     case S_DOUBLE_DECPT:
-        return ax_bad_char_err(p, '.');
+        return bad_char_err(p, '.');
 
     case S_QUOTE_STRING: ASSERT(0, "should not be reachable");
     default: NO_SUCH_STATE();
@@ -256,25 +256,25 @@ enum ax_parse ax__parser_feed(struct ax_parser* p,
         enum ax_parse r;
         enum char_class cc = ax__char_class(ch);
         if (p->state == S_QUOTE_STRING) {
-            r = ax_quoted_char(p, ch);
+            r = quoted_char(p, ch);
             chars++;
         } else if ((cc & C_DELIMIT_MASK) && p->state != S_NOTHING) {
-            r = ax_end_state(p);
+            r = end(p);
         }  else {
             switch (cc) {
             case C_WHITESPACE: r = AX_PARSE_NOTHING; break;
-            case C_LPAREN: r = ax_lparen(p); break;
-            case C_RPAREN: r = ax_rparen(p); break;
-            case C_DECIMAL: r = ax_decimal(p, ch); break;
-            case C_QUOTE: r = ax_quote(p); break;
-            case C_DOT: r = ax_dot(p); break;
+            case C_LPAREN: r = lparen(p); break;
+            case C_RPAREN: r = rparen(p); break;
+            case C_DECIMAL: r = decimal_err(p, ch); break;
+            case C_QUOTE: r = quote_err(p); break;
+            case C_DOT: r = dot_err(p); break;
             case C_HASH: NOT_IMPL();
             default:
                 if (cc & C_SYM0_MASK) {
-                    r = ax_sym0(p, ch);
+                    r = sym1(p, ch);
                 } else {
                     ASSERT(cc == C_INVALID, "should be an invalid char");
-                    r = ax_bad_char_err(p, ch);
+                    r = bad_char_err(p, ch);
                 }
                 break;
             }

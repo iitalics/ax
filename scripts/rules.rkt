@@ -2,56 +2,56 @@
 #:start <top>
 
 [<top> (log <str>)
-       #:before "ax_interp_begin_log(it);\n"
+       #:before "begin_log(it);\n"
        (set-dim <len> <len>)
-       #:before "ax_interp_begin_dim(it);\n"
-       #:after "ax_interp_set_dim(s, it);\n"
+       #:before "begin_dim(it);\n"
+       #:after "set_dim(s, it);\n"
        (set-root <node>)
-       #:after "ax_interp_set_root(s, it);\n"]
+       #:after "set_root(s, it);\n"]
 
 [<node> (rect <r-attr> ...)
-        #:before "ax_interp_begin_node(it, AX_NODE_RECTANGLE);\n"
+        #:before "begin_node(it, AX_NODE_RECTANGLE);\n"
         (container <c-children> <c-attr> ...)
-        #:before "ax_interp_begin_node(it, AX_NODE_CONTAINER);\n"
+        #:before "begin_node(it, AX_NODE_CONTAINER);\n"
         (text <str> <t-attr> ...)
-        #:before "ax_interp_begin_node(it, AX_NODE_TEXT);\nax_interp_begin_text(it);\n"]
+        #:before "begin_node(it, AX_NODE_TEXT);\nbegin_text(it);\n"]
 
 [<r-attr> (size <len> <len>)
-          #:before "ax_interp_begin_dim(it);\n"
-          #:after "ax_interp_set_rect_size(it);\n"
+          #:before "begin_dim(it);\n"
+          #:after "rect_set_size(it);\n"
           (fill <color>)
-          #:before "ax_interp_begin_fill(it);\n"
+          #:before "begin_fill(it);\n"
           <flex-attr>]
 
 [<c-children> (children <node> ...)
-              #:before "ax_interp_begin_children(it);\n"
-              #:after "ax_interp_end_children(it);\n"]
+              #:before "begin_children(it);\n"
+              #:after "end_children(it);\n"]
 
-[<c-attr> (main-justify <justify>) #:before "ax_interp_begin_main_justify(it);\n"
-          (cross-justify <justify>) #:before "ax_interp_begin_cross_justify(it);\n"
-          (background <color>) #:before "ax_interp_begin_background(it);\n"
-          single-line #:op "ax_interp_single_line(it, true);\n"
-          multi-line #:op "ax_interp_single_line(it, false);\n"
+[<c-attr> (main-justify <justify>) #:before "begin_main_justify(it);\n"
+          (cross-justify <justify>) #:before "begin_cross_justify(it);\n"
+          (background <color>) #:before "begin_background(it);\n"
+          single-line #:op "cont_set_single_line(it, true);\n"
+          multi-line #:op "cont_set_single_line(it, false);\n"
           <flex-attr>]
 
-[<t-attr> (font <str>) #:before "ax_interp_begin_font(it);\n"
-          (color <color>) #:before "ax_interp_begin_text_color(it);\n"
+[<t-attr> (font <str>) #:before "begin_font(it);\n"
+          (color <color>) #:before "begin_text_color(it);\n"
           <flex-attr>]
 
-[<flex-attr> (grow <int>) #:before "ax_interp_begin_grow(it);\n"
-             (shrink <int>) #:before "ax_interp_begin_shrink(it);\n"
-             (self-cross-justify <justify>) #:before "ax_interp_begin_self_justify(it);\n"]
+[<flex-attr> (grow <int>) #:before "begin_grow(it);\n"
+             (shrink <int>) #:before "begin_shrink(it);\n"
+             (self-cross-justify <justify>) #:before "begin_self_justify(it);\n"]
 
-[<str> STR #:op "ax_interp_string(it, ~a);\n"]
-[<int> INT #:op "ax_interp_integer(it, ~a);\n"]
+[<str> STR #:op "string(it, ~a);\n"]
+[<int> INT #:op "integer(it, ~a);\n"]
 [<len> <int>]
-[<color> STR #:op "ax_interp_color_string(it, ~a);\n"
-         (rgb <int> <int> <int>) #:before "ax_interp_begin_rgb(it);\n"
-         none #:op "ax_interp_color(it, AX_NULL_COLOR);\n"]
+[<color> STR #:op "color_string(it, ~a);\n"
+         (rgb <int> <int> <int>) #:before "begin_rgb(it);\n"
+         none #:op "color(it, AX_NULL_COLOR);\n"]
 
-[<justify> start #:op "ax_interp_justify(it, AX_JUSTIFY_START);\n"
-           end #:op "ax_interp_justify(it, AX_JUSTIFY_END);\n"
-           center #:op "ax_interp_justify(it, AX_JUSTIFY_CENTER);\n"
-           evenly #:op "ax_interp_justify(it, AX_JUSTIFY_EVENLY);\n"
-           around #:op "ax_interp_justify(it, AX_JUSTIFY_AROUND);\n"
-           between #:op "ax_interp_justify(it, AX_JUSTIFY_BETWEEN);\n"]
+[<justify> start #:op "justify(it, AX_JUSTIFY_START);\n"
+           end #:op "justify(it, AX_JUSTIFY_END);\n"
+           center #:op "justify(it, AX_JUSTIFY_CENTER);\n"
+           evenly #:op "justify(it, AX_JUSTIFY_EVENLY);\n"
+           around #:op "justify(it, AX_JUSTIFY_AROUND);\n"
+           between #:op "justify(it, AX_JUSTIFY_BETWEEN);\n"]

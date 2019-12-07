@@ -128,8 +128,8 @@
 
 (define ((cg:seq . fs)) (for ([f (in-list fs)]) (f)))
 
-(define (cg:ok) (displayln "return 0;"))
-(define (cg:tok-error) (displayln "return ax_interp_generic_err(it);"))
+(define (cg:ok) (displayln "goto ok;"))
+(define (cg:tok-error) (displayln "goto generic_err;"))
 (define (cg:impossible-state-error) (displayln "NO_SUCH_TAG(\"ax_interp.state\");"))
 (define (cg:impossible-ctx-error) (displayln "NO_SUCH_TAG(\"ax_interp.ctx\");"))
 (define (cg:set-state s [denote values]) (printf "it->state = ~a;\n" (denote s)))
@@ -147,9 +147,9 @@
   (printf "}\n"))
 
 (define (cg:push-ctx c [denote values])
-  (printf "ax_interp_push(it, ~a);\n" (denote c)))
+  (printf "push_ctx(it, ~a);\n" (denote c)))
 (define (cg:pop-ctx)
-  (printf "ax_interp_pop(it);\n"))
+  (printf "pop_ctx(it);\n"))
 
 ;; ====================
 

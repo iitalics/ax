@@ -12,7 +12,7 @@
 #define MAX(_x, _y) (((_x) > (_y)) ? (_x) : (_y))
 #define MIN(_x, _y) ((_x) < (_y)) ? (_x) : (_y)
 
-static size_t ax_n_children(struct ax_tree* tree, const struct ax_node* node)
+static size_t n_children(struct ax_tree* tree, const struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tree, child);
     size_t n = 0;
@@ -22,7 +22,7 @@ static size_t ax_n_children(struct ax_tree* tree, const struct ax_node* node)
     return n;
 }
 
-static void ax_propagate_available_size(struct ax_tree* tr, struct ax_node* node)
+static void propagate_available_size(struct ax_tree* tr, struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     switch (node->ty) {
@@ -42,10 +42,10 @@ static void ax_propagate_available_size(struct ax_tree* tr, struct ax_node* node
     }
 }
 
-static void ax_container_distribute_lines(struct ax_tree* tr, struct ax_node* node)
+static void container_distribute_lines(struct ax_tree* tr, struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
-    size_t* const line_count = calloc(ax_n_children(tr, node), sizeof(size_t));
+    size_t* const line_count = calloc(n_children(tr, node), sizeof(size_t));
     ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
     ax_length const avail_size = MAIN(node->avail);
     size_t i = 0;
@@ -65,16 +65,16 @@ static void ax_container_distribute_lines(struct ax_tree* tr, struct ax_node* no
     node->c.n_lines = n_lines;
 }
 
-static void ax_container_single_line(struct ax_tree* tr, struct ax_node* node)
+static void container_single_line(struct ax_tree* tr, struct ax_node* node)
 {
     size_t* const line_count = malloc(1 * sizeof(size_t));
     ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
-    line_count[0] = ax_n_children(tr, node);
+    line_count[0] = n_children(tr, node);
     node->c.line_count = line_count;
     node->c.n_lines = 1;
 }
 
-static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
+static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
 {
     struct ax_dim hypoth;
     DEFINE_TRAVERSAL_LOCALS(tr, child);
@@ -82,9 +82,9 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
 
     case AX_NODE_CONTAINER: {
         if (node->c.single_line) {
-            ax_container_single_line(tr, node);
+            container_single_line(tr, node);
         } else {
-            ax_container_distribute_lines(tr, node);
+            container_distribute_lines(tr, node);
         }
         ax_length main = 0.0, cross = 0.0;
         struct ax_dim line = AX_DIM(0.0, 0.0);
@@ -151,7 +151,7 @@ static void ax_compute_hypothetical_size(struct ax_tree* tr, struct ax_node* nod
     node->hypoth = hypoth;
 }
 
-static void ax_resolve_target_size(struct ax_tree* tr, struct ax_node* node)
+static void resolve_target_size(struct ax_tree* tr, struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     switch (node->ty) {
@@ -208,8 +208,8 @@ static void ax_resolve_target_size(struct ax_tree* tr, struct ax_node* node)
     }
 }
 
-static ax_length ax_justify_padding(enum ax_justify j, ax_length space,
-                                    size_t n_items, ax_length* start)
+static ax_length justify_padding(enum ax_justify j, ax_length space,
+                                 size_t n_items, ax_length* start)
 {
     ax_length pad, offset;
     switch (j) {
@@ -244,7 +244,7 @@ static ax_length ax_justify_padding(enum ax_justify j, ax_length space,
     return pad;
 }
 
-static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
+static void place_coords(struct ax_tree* tr, struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     switch (node->ty) {
@@ -271,16 +271,16 @@ static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
         }
         ax_length pad_x, pad_y;
         ax_length x, y = node->coord.y;
-        pad_y = ax_justify_padding(node->c.cross_justify,
-                                   cross_flex_space,
-                                   node->c.n_lines,
-                                   &y);
-#define START_LINE() do {                                       \
-            x = node->coord.x;                                  \
-            pad_x = ax_justify_padding(node->c.main_justify,    \
-                                       lines[li].flex_space,    \
-                                       node->c.line_count[li],  \
-                                       &x); } while(0)
+        pad_y = justify_padding(node->c.cross_justify,
+                                cross_flex_space,
+                                node->c.n_lines,
+                                &y);
+#define START_LINE() do {                                   \
+            x = node->coord.x;                              \
+            pad_x = justify_padding(node->c.main_justify,   \
+                                    lines[li].flex_space,   \
+                                    node->c.line_count[li], \
+                                    &x); } while(0)
         size_t prev_li = 0;
         li = 0;
         START_LINE();
@@ -291,10 +291,10 @@ static void ax_place_coords(struct ax_tree* tr, struct ax_node* node)
                 START_LINE();
             }
             child->coord = AX_POS(x, y);
-            ax_justify_padding(child->cross_justify,
-                               lines[li].cross_size - CROSS(child->target),
-                               1,
-                               &child->coord.y);
+            justify_padding(child->cross_justify,
+                            lines[li].cross_size - CROSS(child->target),
+                            1,
+                            &child->coord.y);
             x += MAIN(child->target) + pad_x;
         }
         free(lines);
@@ -358,20 +358,20 @@ void ax__layout(struct ax_tree* tr, struct ax_geom* g)
 
     ax__root(tr)->avail = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
-        ax_propagate_available_size(tr, node);
+        propagate_available_size(tr, node);
     }
 
     FOR_EACH_FROM_BOTTOM(node) {
-        ax_compute_hypothetical_size(tr, node);
+        compute_hypothetical_size(tr, node);
     }
 
     ax__root(tr)->target = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
-        ax_resolve_target_size(tr, node);
+        resolve_target_size(tr, node);
     }
 
     ax__root(tr)->coord = AX_POS(0.0, 0.0);
     FOR_EACH_FROM_TOP(node) {
-        ax_place_coords(tr, node);
+        place_coords(tr, node);
     }
 }

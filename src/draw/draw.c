@@ -17,7 +17,7 @@ void ax__free_draw_buf(struct ax_draw_buf* db)
     free(db->data);
 }
 
-static struct ax_draw* ax_draw_buf_ins(struct ax_draw_buf* db)
+struct ax_draw* draw_buf_ins(struct ax_draw_buf* db)
 {
     if (db->len >= db->cap) {
         db->cap *= 2;
@@ -27,12 +27,12 @@ static struct ax_draw* ax_draw_buf_ins(struct ax_draw_buf* db)
     return &db->data[db->len++];
 }
 
-static void ax_redraw_(struct ax_node* node, struct ax_draw_buf* db)
+static void redraw_(struct ax_node* node, struct ax_draw_buf* db)
 {
     switch (node->ty) {
     case AX_NODE_CONTAINER:
         if (!AX_COLOR_IS_NULL(node->c.background)) {
-            struct ax_draw* d = ax_draw_buf_ins(db);
+            struct ax_draw* d = draw_buf_ins(db);
             d->ty = AX_DRAW_RECT;
             d->r.fill = node->c.background;
             d->r.bounds.o = node->coord;
@@ -41,7 +41,7 @@ static void ax_redraw_(struct ax_node* node, struct ax_draw_buf* db)
         break;
 
     case AX_NODE_RECTANGLE: {
-        struct ax_draw* d = ax_draw_buf_ins(db);
+        struct ax_draw* d = draw_buf_ins(db);
         d->ty = AX_DRAW_RECT;
         d->r.fill = node->r.fill;
         d->r.bounds.o = node->coord;
@@ -54,7 +54,7 @@ static void ax_redraw_(struct ax_node* node, struct ax_draw_buf* db)
              line != NULL;
              line = line->next)
         {
-            struct ax_draw* d = ax_draw_buf_ins(db);
+            struct ax_draw* d = draw_buf_ins(db);
             d->ty = AX_DRAW_TEXT;
             d->t.color = node->t.color;
             d->t.font = node->t.font;
@@ -72,6 +72,6 @@ void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db)
     DEFINE_TRAVERSAL_LOCALS(tr, node);
     db->len = 0;
     FOR_EACH_FROM_TOP(node) {
-        ax_redraw_(node, db);
+        redraw_(node, db);
     }
 }

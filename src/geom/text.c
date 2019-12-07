@@ -6,14 +6,14 @@
 #include "../backend.h"
 #include "../utils.h"
 
-static ax_length ax_dummy_measure_fn(const char* str, void* ud)
+static ax_length dummy_measure_fn(const char* str, void* ud)
 {
     (void) ud;
     (void) str;
     return 0.0;
 }
 
-static ax_length ax_font_measure_fn(const char* str, void* font)
+static ax_length font_measure_fn(const char* str, void* font)
 {
     struct ax_text_metrics tm;
     ax__measure_text(font, str, &tm);
@@ -30,7 +30,7 @@ void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
     ti->line_len = 0;
     ti->line_need_reset = false;
 
-    ti->mf = ax_dummy_measure_fn;
+    ti->mf = dummy_measure_fn;
     ti->mf_userdata = NULL;
     ti->max_width = 0.0;
 }
@@ -43,7 +43,7 @@ void ax__text_iter_free(struct ax_text_iter* ti)
 
 void ax__text_iter_set_font(struct ax_text_iter* ti, void* font)
 {
-    ti->mf = ax_font_measure_fn;
+    ti->mf = font_measure_fn;
     ti->mf_userdata = font;
 }
 
