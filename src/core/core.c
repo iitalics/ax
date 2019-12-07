@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define AX_DEFINE_TRAVERSAL_MACROS 1
 #include "../core.h"
 #include "../tree.h"
 #include "../tree/desc.h"
@@ -62,8 +61,8 @@ const struct ax_draw_buf* ax_draw(struct ax_state* s)
 
 void ax_write_start(struct ax_state* s)
 {
-    ax__init_interp(s->interp);
     ax__free_interp(s->interp);
+    ax__init_interp(s->interp);
     ax__parser_eof(s->parser);
 }
 
