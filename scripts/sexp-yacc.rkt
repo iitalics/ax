@@ -108,10 +108,10 @@
 
 (define cgv:the-state "it->state")
 (define cgv:the-ctx "it->ctx")
-(define cgv:the-token "p")
-(define cgv:int-value "pr->i")
-(define cgv:double-value "pr->d")
-(define cgv:str-value "pr->str")
+(define cgv:the-token "tok")
+(define cgv:int-value "lex->i")
+(define cgv:double-value "lex->d")
+(define cgv:str-value "lex->str")
 
 (define cgv:token-lp "AX_PARSE_LPAREN")
 (define cgv:token-rp "AX_PARSE_RPAREN")
@@ -119,7 +119,7 @@
 (define cgv:token-str "AX_PARSE_STRING")
 (define cgv:token-sym "AX_PARSE_SYMBOL")
 (define (cgv:is-symbol s)
-  (format "strcmp(pr->str, ~v) == 0" (symbol->string s)))
+  (format "strcmp(lex->str, ~v) == 0" (symbol->string s)))
 
 (define (op->function stmt)
   (if (string-contains? stmt "~a")

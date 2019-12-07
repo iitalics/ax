@@ -8,7 +8,7 @@ struct ax_desc;
 struct ax_interp {
     char* err_msg;
 
-    // for sexp parser
+    // for sexp lexer
     int state;
     int ctx;
     int ctx_stack[128];
@@ -34,4 +34,4 @@ void ax__free_interp(struct ax_interp* it);
 
 int ax__interp(struct ax_state* s,
                struct ax_interp* it,
-               struct ax_parser* pr, enum ax_parse p);
+               struct ax_lexer* lex, enum ax_parse tok);

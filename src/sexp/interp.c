@@ -254,16 +254,16 @@ static void cont_set_single_line(struct ax_interp* it, bool s)
 }
 
 int ax__interp(struct ax_state* s,
-                     struct ax_interp* it,
-                     struct ax_parser* pr, enum ax_parse p)
+               struct ax_interp* it,
+               struct ax_lexer* lex, enum ax_parse tok)
 {
-    if (p == AX_PARSE_NOTHING) {
+    if (tok == AX_PARSE_NOTHING) {
         goto ok;
     }
     if (it->err_msg != NULL) {
         goto err;
     }
-    if (p == AX_PARSE_ERROR) {
+    if (tok == AX_PARSE_ERROR) {
         goto parse_err;
     }
 
@@ -285,9 +285,9 @@ generic_err: {
 
 parse_err: {
 #define FMT "parse erorr: %s"
-        size_t len = strlen(FMT) - 2 + strlen(pr->str);
+        size_t len = strlen(FMT) - 2 + strlen(lex->str);
         it->err_msg = malloc(len + 1);
-        sprintf(it->err_msg, FMT, pr->str);
+        sprintf(it->err_msg, FMT, lex->str);
         goto err;
 #undef FMT
     }

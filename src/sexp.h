@@ -45,7 +45,7 @@ enum ax_parse_error {
     AX_PARSE_ERROR__MAX,
 };
 
-struct ax_parser {
+struct ax_lexer {
     int state;
     char* str;
     size_t len, cap;
@@ -58,11 +58,11 @@ struct ax_parser {
 };
 
 
-extern void ax__init_parser(struct ax_parser* p);
-extern void ax__free_parser(struct ax_parser* p);
+void ax__init_lexer(struct ax_lexer* lex);
+void ax__free_lexer(struct ax_lexer* lex);
 
-extern enum ax_parse ax__parser_feed(struct ax_parser* p,
-                                     char const* chars,
-                                     char** out_chars);
+enum ax_parse ax__lexer_feed(struct ax_lexer* lex,
+                             char const* chars,
+                             char** out_chars);
 
-extern enum ax_parse ax__parser_eof(struct ax_parser* p);
+enum ax_parse ax__lexer_eof(struct ax_lexer* lex);

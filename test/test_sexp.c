@@ -49,25 +49,25 @@ static char* sexp_readout(const char* input)
     char* const out_start = malloc(4096);
     char* out = out_start;
     out += sprintf(out, "{");
-    struct ax_parser p;
+    struct ax_lexer lex;
     enum ax_parse r;
-    ax__init_parser(&p);
+    ax__init_lexer(&lex);
     for (bool end = false; !end; ) {
         if (inp >= inp_end) {
             end = true;
-            r = ax__parser_eof(&p);
+            r = ax__lexer_eof(&lex);
         } else {
-            r = ax__parser_feed(&p, inp, &inp);
+            r = ax__lexer_feed(&lex, inp, &inp);
         }
         switch (r) {
         case AX_PARSE_NOTHING: break;
-        case AX_PARSE_INTEGER: out += sprintf(out, "i:%ld,", p.i); break;
-        case AX_PARSE_DOUBLE: out += sprintf(out, "d:%.2f,", p.d); break;
-        case AX_PARSE_LPAREN: out += sprintf(out, "l:%zu,", p.paren_depth); break;
-        case AX_PARSE_RPAREN: out += sprintf(out, "r:%zu,", p.paren_depth); break;
-        case AX_PARSE_SYMBOL: out += sprintf(out, "s:%s,", p.str); break;
-        case AX_PARSE_STRING: out += sprintf(out, "S:%s,", p.str); break;
-        case AX_PARSE_ERROR: out += sprintf(out, "e:%s,", p.str); break;
+        case AX_PARSE_INTEGER: out += sprintf(out, "i:%ld,", lex.i); break;
+        case AX_PARSE_DOUBLE: out += sprintf(out, "d:%.2f,", lex.d); break;
+        case AX_PARSE_LPAREN: out += sprintf(out, "l:%zu,", lex.paren_depth); break;
+        case AX_PARSE_RPAREN: out += sprintf(out, "r:%zu,", lex.paren_depth); break;
+        case AX_PARSE_SYMBOL: out += sprintf(out, "s:%s,", lex.str); break;
+        case AX_PARSE_STRING: out += sprintf(out, "S:%s,", lex.str); break;
+        case AX_PARSE_ERROR: out += sprintf(out, "e:%s,", lex.str); break;
         default: NO_SUCH_TAG("ax_parse");
         }
     }
@@ -76,7 +76,7 @@ static char* sexp_readout(const char* input)
     } else {
         sprintf(out - 1, "}");
     }
-    ax__free_parser(&p);
+    ax__free_lexer(&lex);
     return out_start;
 }
 

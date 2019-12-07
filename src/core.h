@@ -1,7 +1,7 @@
 #pragma once
 #include "base.h"
 
-struct ax_parser;
+struct ax_lexer;
 struct ax_interp;
 struct ax_tree;
 struct ax_geom;
@@ -9,7 +9,7 @@ struct ax_drawbuf;
 struct ax_desc;
 
 struct ax_state {
-    struct ax_parser* parser;
+    struct ax_lexer* lexer;
     struct ax_interp* interp;
     struct ax_tree* tree;
     struct ax_geom* geom;

@@ -13,7 +13,7 @@ struct ax_state* ax_new_state()
 {
     struct everything {
         struct ax_state s;
-        struct ax_parser p;
+        struct ax_lexer l;
         struct ax_interp i;
         struct ax_tree t;
         struct ax_geom g;
@@ -24,7 +24,7 @@ struct ax_state* ax_new_state()
     ASSERT(e != NULL, "malloc ax_state");
 
     struct ax_state* s = &e->s;
-    ax__init_parser(s->parser = &e->p);
+    ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
     ax__init_tree(s->tree = &e->t);
     ax__init_geom(s->geom = &e->g);
@@ -40,7 +40,7 @@ void ax_destroy_state(struct ax_state* s)
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
         ax__free_interp(s->interp);
-        ax__free_parser(s->parser);
+        ax__free_lexer(s->lexer);
         free(s);
     }
 }
@@ -63,7 +63,7 @@ void ax_write_start(struct ax_state* s)
 {
     ax__free_interp(s->interp);
     ax__init_interp(s->interp);
-    ax__parser_eof(s->parser);
+    ax__lexer_eof(s->lexer);
 }
 
 int ax_write_chunk(struct ax_state* s, const char* input)
@@ -71,9 +71,9 @@ int ax_write_chunk(struct ax_state* s, const char* input)
     char* acc = (char*) input;
     char const* end = input + strlen(input);
     while (acc < end) {
-        enum ax_parse p = ax__parser_feed(s->parser, acc, &acc);
+        enum ax_parse p = ax__lexer_feed(s->lexer, acc, &acc);
         if (p != AX_PARSE_NOTHING) {
-            int r = ax__interp(s, s->interp, s->parser, p);
+            int r = ax__interp(s, s->interp, s->lexer, p);
             if (r != 0) {
                 return r;
             }
@@ -84,8 +84,8 @@ int ax_write_chunk(struct ax_state* s, const char* input)
 
 int ax_write_end(struct ax_state* s)
 {
-    enum ax_parse p = ax__parser_eof(s->parser);
-    return ax__interp(s, s->interp, s->parser, p);
+    enum ax_parse p = ax__lexer_eof(s->lexer);
+    return ax__interp(s, s->interp, s->lexer, p);
 }
 
 void ax__invalidate(struct ax_state* s)
