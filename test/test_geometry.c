@@ -21,7 +21,7 @@ TEST(build_tree)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root"
              " (container (children " TWO_RECTS ")))");
     CHECK_SZEQ(s->tree->count, (size_t) 3);
@@ -30,6 +30,8 @@ TEST(build_tree)
     CHECK_IEQ(N(2)->ty, AX_NODE_RECTANGLE);
     CHECK_IEQ_HEX(N(1)->r.fill, 0xff0000);
     CHECK_IEQ_HEX(N(2)->r.fill, 0x0000ff);
+    CHECK_DIMEQ(N(1)->r.size, AX_DIM(60, 60));
+    CHECK_DIMEQ(N(2)->r.size, AX_DIM(60, 60));
     ax_destroy_state(s);
 }
 
@@ -38,7 +40,7 @@ TEST(build_tree)
 #define JUSTIFY_TEST_2R(_mj, _xj, _x0, _y0, _x1, _y1) do {          \
         struct ax_state* s = ax_new_state();                        \
         ax_write(s,                                                 \
-                 "(set-dim 200 200)"                                \
+                 "(init (window-size 200 200))"                                \
                  "(set-root (container (children " TWO_RECTS ")"    \
                  "                     (main-justify " _mj ")"      \
                  "                     (cross-justify " _xj ")))"); \
@@ -73,7 +75,7 @@ TEST(main_justify_around_2r)
 #define TEXT_TEST(_aw, _ah, _fsz, _str, _expw, _exph)   \
     struct ax_state* s = ax_new_state();                \
     ax_write(s,                                         \
-             "(set-dim " # _aw " " # _ah ")"            \
+             "(init (window-size " # _aw " " # _ah "))" \
              "(set-root"                                \
              " (text \"" _str "\""                      \
              "       (font \"size:" # _fsz "\")))");    \
@@ -99,7 +101,7 @@ TEST(spill_3r)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-            "(set-dim 200 200)"
+            "(init (window-size 200 200))"
             "(set-root"
             " (container"
             "  (children (rect (fill \"ff0000\") (size 80 80))"
@@ -119,7 +121,7 @@ TEST(shrink_3r)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-            "(set-dim 200 200)"
+            "(init (window-size 200 200))"
             "(set-root"
             " (container"
             "  (children (rect (fill \"ff0000\") (size 80 80))"
@@ -142,7 +144,7 @@ TEST(shrink_3r_asym)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root"
              " (container"
              "  (children (rect (fill \"ff0000\") (size 80 80) (shrink 0))"

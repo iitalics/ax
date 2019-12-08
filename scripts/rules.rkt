@@ -7,8 +7,6 @@
        #:before "begin_log(it);\n"
        (die <str>)
        #:before "begin_die(it);\n"
-       (set-dim <len> <len>)
-       #:before "begin_set_dim(it);\n"
        (set-root <node>)
        #:after "set_root(s, it);\n"]
 

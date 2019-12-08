@@ -32,7 +32,7 @@ TEST(draw_1r)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root (rect (fill \"ff0033\") (size 60 80)))");
 
     const struct ax_draw_buf* d = ax_draw(s);
@@ -48,7 +48,7 @@ TEST(draw_3r)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root"
              " (container (children (rect (fill \"ff0000\") (size 60 60))"
              "                      (rect (fill \"00ff00\") (size 20 20))"
@@ -87,6 +87,7 @@ TEST(draw_3r_colors)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
+             "(init)"
              "(set-root"
              " (container (children (rect (fill \"123456\"))"
              "                      (rect (fill none))"
@@ -103,7 +104,7 @@ TEST(draw_text_1l)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root (text \"Hello, world\""
              "                (color \"111111\")"
              "                (font \"size:10\")))");
@@ -122,7 +123,7 @@ TEST(draw_text_2l)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 100 100)"
+             "(init (window-size 100 100))"
              "(set-root (text \"Hello, world\""
              "                (color \"111111\")"
              "                (font \"size:10\")))");
@@ -147,7 +148,7 @@ TEST(draw_2r_bg)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-            "(set-dim 200 200)"
+            "(init (window-size 200 200))"
             "(set-root"
             " (container (children (rect (fill \"ff0000\") (size 60 60))"
             "                      (rect (fill \"0000ff\") (size 60 60)))"
@@ -176,7 +177,7 @@ TEST(draw_nested_bg)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root"
              " (container (children (container"
              "                       (children (rect (fill \"ff0000\") (size 60 60))"
@@ -218,7 +219,7 @@ TEST(draw_nested_2_bg)
 {
     struct ax_state* s = ax_new_state();
     ax_write(s,
-             "(set-dim 200 200)"
+             "(init (window-size 200 200))"
              "(set-root"    // blue rect is before inner container
              " (container (children (rect (fill \"0000ff\") (size 60 60))"
              "                      (container"

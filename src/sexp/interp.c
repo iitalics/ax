@@ -12,7 +12,6 @@ enum ax_interp_mode {
     M_FILL,
     M_TEXT_COLOR,
     M_BACKGROUND,
-    M_SET_DIM,
     M_WIN_SIZE,
     M_RECT_SIZE,
     M_MAIN_JUSTIFY,
@@ -147,7 +146,6 @@ static void end_children(struct ax_interp* it)
     it->desc = parent;
 }
 
-static void begin_set_dim(struct ax_interp* it) { it->mode = M_SET_DIM; it->i = 0; }
 static void begin_win_size(struct ax_interp* it) { it->mode = M_WIN_SIZE; it->i = 0; }
 static void begin_rect_size(struct ax_interp* it) { it->mode = M_RECT_SIZE; it->i = 0; }
 static void begin_log(struct ax_interp* it) { it->mode = M_LOG; }
@@ -211,9 +209,6 @@ static void string(struct ax_state* s, struct ax_interp* it, const char* str)
 static void dim(struct ax_state* s, struct ax_interp* it, struct ax_dim d)
 {
     switch (it->mode) {
-    case M_SET_DIM:
-        ax__set_dim(s, d);
-        break;
     case M_WIN_SIZE:
         ax__config_win_size(s, d);
         break;
@@ -228,7 +223,6 @@ static void integer(struct ax_state* s, struct ax_interp* it, long v)
 {
     switch (it->mode) {
 
-    case M_SET_DIM:
     case M_WIN_SIZE:
     case M_RECT_SIZE:
         switch (it->i++) {
