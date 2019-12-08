@@ -20,7 +20,7 @@ struct ax_draw_r {
 
 struct ax_draw_t {
     ax_color color;
-    void* font;
+    struct ax_font* font;
     const char* text;
     struct ax_pos pos;
 };

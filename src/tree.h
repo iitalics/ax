@@ -4,6 +4,7 @@
 
 struct ax_state;
 struct ax_desc;
+struct ax_font;
 
 typedef size_t node_id;
 
@@ -41,7 +42,7 @@ struct ax_rect {
 struct ax_node_t {
     ax_color color;
     char* text;
-    void* font;
+    struct ax_font* font;
     struct ax_node_t_line* lines;
 };
 

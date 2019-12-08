@@ -107,7 +107,7 @@ static int draw(struct ax_state* ax)
 
         case AX_DRAW_TEXT: {
             SDL_Color fg = ax_color_to_sdl(d.t.color);
-            SDL_Surface* sf = TTF_RenderUTF8_Blended(d.t.font, d.t.text, fg);
+            SDL_Surface* sf = TTF_RenderUTF8_Blended((void*) d.t.font, d.t.text, fg);
             if (sf == NULL) {
                 goto ttf_err;
             }
