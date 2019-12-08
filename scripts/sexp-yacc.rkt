@@ -129,7 +129,7 @@
 (define ((cg:seq . fs)) (for ([f (in-list fs)]) (f)))
 
 (define (cg:ok) (displayln "goto ok;"))
-(define (cg:tok-error) (displayln "goto generic_err;"))
+(define (cg:syntax-error) (displayln "goto syntax_err;"))
 (define (cg:impossible-state-error) (displayln "NO_SUCH_TAG(\"ax_interp.state\");"))
 (define (cg:impossible-ctx-error) (displayln "NO_SUCH_TAG(\"ax_interp.ctx\");"))
 (define (cg:set-state s [denote values]) (printf "it->state = ~a;\n" (denote s)))
@@ -222,7 +222,7 @@
                  (values tk (λ () (f) (cg:goto s*)))))
              (values (s->code s)
                      (λ ()
-                       (cg:token-case cgv:the-token tok=>f cg:tok-error))))
+                       (cg:token-case cgv:the-token tok=>f cg:syntax-error))))
            cg:impossible-state-error)
 
   (for ([(s δs) (in-hash ts)])

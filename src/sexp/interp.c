@@ -269,12 +269,12 @@ int ax__interp(struct ax_state* s,
         goto err;
     }
     if (tok == AX_PARSE_ERROR) {
-        goto parse_err;
+        goto token_err;
     }
 
 #include "../../_build/parser_rules.inc"
 
-generic_err: {
+syntax_err: {
         const char* ctx;
         switch (it->state) {
             // TODO: generate state names
@@ -288,7 +288,7 @@ generic_err: {
 #undef FMT
     }
 
-parse_err: {
+token_err: {
 #define FMT "parse erorr: %s"
         size_t len = strlen(FMT) - 2 + strlen(lex->str);
         it->err_msg = malloc(len + 1);
