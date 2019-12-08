@@ -7,7 +7,7 @@
 
 extern char _ax_test_fail_reason[1024];
 extern char _ax_test_fail_loc[256];
-void _ax_test_fail();
+void _ax_test_fail(void);
 
 extern const char* _ax_true_str;
 extern const char* _ax_false_str;
@@ -17,7 +17,9 @@ extern const char* _ax_false_str;
 /* int eq_int(int x, int y) { return x == y; } */
 /* int eq_float(float x, float y) { return (x > y) ? (x - y < 0.0001) : (y - x < 0.0001); } */
 
-#define TEST(_name) void test_ ## _name ()
+#define TEST(_name) \
+    void test_ ## _name (void);\
+    void test_ ## _name (void)
 
 #define CHECK(_b, ...) do {                             \
         if (!(_b)) {                                    \

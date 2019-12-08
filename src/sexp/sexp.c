@@ -247,8 +247,8 @@ static enum ax_parse dot_err(struct ax_lexer* lex)
 }
 
 enum ax_parse ax__lexer_feed(struct ax_lexer* lex,
-                              char const* chars,
-                              char** out_chars)
+                             const char* chars,
+                             char** out_chars)
 {
     char ch;
     enum ax_parse rv;

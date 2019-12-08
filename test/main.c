@@ -36,7 +36,7 @@ static bool skip_test(
 
 static void run_test(
     char* name,
-    void (*func)(),
+    void (*func)(void),
     int argc,
     char** argv)
 {
@@ -65,7 +65,7 @@ static void run_test(
 int main(int argc, char** argv)
 {
 #define RUN_TEST(_name) do {                    \
-        void test_ ## _name ();                 \
+        void test_ ## _name (void);             \
         run_test(# _name,                       \
                  test_ ## _name,                \
                  argc, argv); } while(0)

@@ -5,7 +5,7 @@
  * Setup and teardown
  */
 
-struct ax_state* ax_new_state();
+struct ax_state* ax_new_state(void);
 void ax_destroy_state(struct ax_state* s);
 
 /*

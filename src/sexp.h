@@ -62,7 +62,7 @@ void ax__init_lexer(struct ax_lexer* lex);
 void ax__free_lexer(struct ax_lexer* lex);
 
 enum ax_parse ax__lexer_feed(struct ax_lexer* lex,
-                             char const* chars,
+                             const char* chars,
                              char** out_chars);
 
 enum ax_parse ax__lexer_eof(struct ax_lexer* lex);

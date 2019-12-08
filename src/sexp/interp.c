@@ -206,6 +206,7 @@ static void string(struct ax_state* s, struct ax_interp* it, const char* str)
 
 static void integer(struct ax_state* s, struct ax_interp* it, long v)
 {
+    (void) s;
     switch (it->mode) {
     case M_DIM_W:
         it->dim.w = v;

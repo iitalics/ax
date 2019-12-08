@@ -17,7 +17,7 @@ void ax__free_draw_buf(struct ax_draw_buf* db)
     free(db->data);
 }
 
-struct ax_draw* draw_buf_ins(struct ax_draw_buf* db)
+static struct ax_draw* draw_buf_ins(struct ax_draw_buf* db)
 {
     if (db->len >= db->cap) {
         db->cap *= 2;

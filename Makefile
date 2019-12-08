@@ -3,7 +3,10 @@ cpp		= ${cc} -E
 ld		= ${cc}
 etags		= etags
 rkt 		= racket
-cc_flags	= -std=c99 -g -Wall -Werror=implicit-function-declaration -fPIC
+cc_flags	= -std=c99 -g -fPIC \
+			-Wall -Wshadow -Wpointer-arith  -Wstrict-prototypes \
+			-Wmissing-prototypes -Wfloat-equal \
+			-Werror=implicit-function-declaration
 
 srcs		= $(shell ${find_srcs})
 gen		= _build/parser_rules.inc
