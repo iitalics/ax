@@ -31,7 +31,7 @@ c:
 	rm -rf _build ${test_exes}
 
 t: ax_test
-	LD_LIBRARY_PATH=_build/lib ./$<
+	LD_LIBRARY_PATH=_build/lib ./$< ${test_args}
 
 sdl_t: ax_sdl_test
 	LD_LIBRARY_PATH=_build/lib ./$<
@@ -61,7 +61,7 @@ _build/src__%.o: src = $(shell echo ${obj} | ${sed_obj2src})
 _build/src__%.o: ${src}
 	@mkdir -p $(dir $@)
 	@echo CC ${src}
-	@${cpp} -MM -MT ${obj} -MF ${dep} ${src}
+	@${cpp} -MM -MT $@ -MF ${dep} ${src}
 	@${cc} ${cc_flags} -c -o ${obj} ${src}
 
 _build/parser_rules.inc: scripts/rules.rkt scripts/sexp-yacc.rkt
@@ -86,7 +86,11 @@ _build/lib/libaxl.so: ${gen} ${objs}
 	@echo "LD $(notdir $@)"
 	@${ld} -shared -o $@ ${objs}
 
-_build/lib/libaxl_SDL.so: backend/sdl.c
-	@mkdir -p $(dir $@)
-	@echo "LD $(notdir $@)"
-	@${ld} -shared $(shell pkg-config -libs -cflags sdl2 SDL2_ttf) -o $@ $<
+_build/lib/libaxl_SDL.so: lib = $@
+_build/lib/libaxl_SDL.so: src = backend/sdl.c
+_build/lib/libaxl_SDL.so: dep = _build/backend__sdl.dep
+_build/lib/libaxl_SDL.so: ${src}
+	@mkdir -p $(dir ${src})
+	@echo "LD $(notdir ${src})"
+	@${cpp} -MM -MT $@ -MF ${dep} ${src}
+	@${ld} -shared $(shell pkg-config -libs -cflags sdl2 SDL2_ttf) -o $@ ${src}
