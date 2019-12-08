@@ -21,21 +21,3 @@ struct ax_aabb { struct ax_pos o; struct ax_dim s; };
 bool ax_color_to_rgb(ax_color color, uint8_t* out_rgb);
 
 ax_color ax_color_from_rgb(uint8_t* rgb);
-
-
-/* Lost and found */
-
-enum ax_justify {
-    AX_JUSTIFY_START = 0,
-    AX_JUSTIFY_END,
-    AX_JUSTIFY_CENTER,
-    AX_JUSTIFY_EVENLY,
-    AX_JUSTIFY_AROUND,
-    AX_JUSTIFY_BETWEEN,
-    AX_JUSTIFY__MAX
-};
-
-struct ax_rect {
-    ax_color fill;
-    struct ax_dim size;
-};

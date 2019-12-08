@@ -14,6 +14,16 @@ enum ax_node_type {
     AX_NODE__MAX
 };
 
+enum ax_justify {
+    AX_JUSTIFY_START = 0,
+    AX_JUSTIFY_END,
+    AX_JUSTIFY_CENTER,
+    AX_JUSTIFY_EVENLY,
+    AX_JUSTIFY_AROUND,
+    AX_JUSTIFY_BETWEEN,
+    AX_JUSTIFY__MAX
+};
+
 struct ax_node_c {
     size_t n_lines;
     size_t* line_count;
@@ -21,6 +31,11 @@ struct ax_node_c {
     enum ax_justify cross_justify;
     bool single_line;
     ax_color background;
+};
+
+struct ax_rect {
+    ax_color fill;
+    struct ax_dim size;
 };
 
 struct ax_node_t {
