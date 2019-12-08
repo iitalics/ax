@@ -1,15 +1,19 @@
 #lang s-exp "./sexp-yacc.rkt"
 #:start <top>
 
-[<top> (log <str>)
+[<top> (init <init> ...)
+       #:after "end_init(s, it);\n"
+       (log <str>)
        #:before "begin_log(it);\n"
        (die <str>)
        #:before "begin_die(it);\n"
        (set-dim <len> <len>)
-       #:before "begin_dim(it);\n"
-       #:after "set_dim(s, it);\n"
+       #:before "begin_set_dim(it);\n"
        (set-root <node>)
        #:after "set_root(s, it);\n"]
+
+[<init> (window-size <len> <len>)
+        #:before "begin_win_size(it);\n"]
 
 [<node> (rect <r-attr> ...)
         #:before "begin_node(it, AX_NODE_RECTANGLE);\n"
@@ -19,8 +23,7 @@
         #:before "begin_node(it, AX_NODE_TEXT);\nbegin_text(it);\n"]
 
 [<r-attr> (size <len> <len>)
-          #:before "begin_dim(it);\n"
-          #:after "rect_set_size(it);\n"
+          #:before "begin_rect_size(it);\n"
           (fill <color>)
           #:before "begin_fill(it);\n"
           <flex-attr>]

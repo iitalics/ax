@@ -104,7 +104,7 @@ node_id ax__build_node(struct ax_state* s, struct ax_tree* tr, const struct ax_d
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
         void* font = ax__create_font(s, desc->t.font_name);
-        ASSERT(font != NULL, "create font");
+        ASSERT(font != NULL, "create font: %s", ax_get_error(s));
         node->t = (struct ax_node_t) {
             .color = desc->t.color,
             .text = text,

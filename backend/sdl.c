@@ -186,7 +186,12 @@ struct ax_font* ax__create_font(struct ax_state* ax,
         goto err;
     }
     char* path = s + 6;
-    return (void*) TTF_OpenFont(path, size);
+    void* f = TTF_OpenFont(path, size);
+    if (f == NULL) {
+        ax__set_error(ax, TTF_GetError());
+        return NULL;
+    }
+    return f;
 err:
     ax__set_error(ax, "invalid font description");
     return NULL;

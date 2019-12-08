@@ -5,6 +5,8 @@
 struct ax_backend {
 };
 
+static struct ax_backend the_backend;
+
 struct ax_font {
     ax_length size;
 };
@@ -12,7 +14,7 @@ struct ax_font {
 struct ax_backend* ax__create_backend(struct ax_state* s)
 {
     (void) s;
-    return NULL;
+    return &the_backend;
 }
 
 void ax__destroy_backend(struct ax_backend* bac)

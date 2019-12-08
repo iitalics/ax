@@ -12,8 +12,9 @@ enum ax_interp_mode {
     M_FILL,
     M_TEXT_COLOR,
     M_BACKGROUND,
-    M_DIM_W,
-    M_DIM_H,
+    M_SET_DIM,
+    M_WIN_SIZE,
+    M_RECT_SIZE,
     M_MAIN_JUSTIFY,
     M_CROSS_JUSTIFY,
     M_SELF_JUSTIFY,
@@ -74,6 +75,12 @@ static void pop_ctx(struct ax_interp* it)
     //ax_interp_log_stack(it);
 }
 
+static void end_init(struct ax_state* s, struct ax_interp* it)
+{
+    (void) it;
+    ax__initialize_backend(s);
+}
+
 static void begin_node(struct ax_interp* it, enum ax_node_type ty)
 {
     struct ax_desc* desc = malloc(sizeof(struct ax_desc));
@@ -115,10 +122,10 @@ static void begin_node(struct ax_interp* it, enum ax_node_type ty)
     it->desc = desc;
 }
 
-static void set_dim(struct ax_state* s, struct ax_interp* it)
-{
-    ax__set_dim(s, it->dim);
-}
+/* static void set_dim(struct ax_state* s, struct ax_interp* it) */
+/* { */
+/*     ax__set_dim(s, it->dim); */
+/* } */
 
 static void set_root(struct ax_state* s, struct ax_interp* it)
 {
@@ -140,14 +147,11 @@ static void end_children(struct ax_interp* it)
     it->desc = parent;
 }
 
-static void rect_set_size(struct ax_interp* it)
-{
-    it->desc->r.size = it->dim;
-}
-
+static void begin_set_dim(struct ax_interp* it) { it->mode = M_SET_DIM; it->i = 0; }
+static void begin_win_size(struct ax_interp* it) { it->mode = M_WIN_SIZE; it->i = 0; }
+static void begin_rect_size(struct ax_interp* it) { it->mode = M_RECT_SIZE; it->i = 0; }
 static void begin_log(struct ax_interp* it) { it->mode = M_LOG; }
 static void begin_die(struct ax_interp* it) { it->mode = M_DIE; }
-static void begin_dim(struct ax_interp* it) { it->mode = M_DIM_W; }
 static void begin_fill(struct ax_interp* it) { it->mode = M_FILL; }
 static void begin_main_justify(struct ax_interp* it) { it->mode = M_MAIN_JUSTIFY; }
 static void begin_cross_justify(struct ax_interp* it) { it->mode = M_CROSS_JUSTIFY; }
@@ -157,7 +161,7 @@ static void begin_shrink(struct ax_interp* it) { it->mode = M_SHRINK; }
 static void begin_text(struct ax_interp* it) { it->mode = M_TEXT; }
 static void begin_font(struct ax_interp* it) { it->mode = M_FONT; }
 static void begin_text_color(struct ax_interp* it) { it->mode = M_TEXT_COLOR; }
-static void begin_rgb(struct ax_interp* it) { it->col.rgb_idx = 0; }
+static void begin_rgb(struct ax_interp* it) { it->i = 0; }
 static void begin_background(struct ax_interp* it) { it->mode = M_BACKGROUND; }
 
 static void color(struct ax_interp* it, ax_color col)
@@ -204,18 +208,41 @@ static void string(struct ax_state* s, struct ax_interp* it, const char* str)
     }
 }
 
+static void dim(struct ax_state* s, struct ax_interp* it, struct ax_dim d)
+{
+    switch (it->mode) {
+    case M_SET_DIM:
+        ax__set_dim(s, d);
+        break;
+    case M_WIN_SIZE:
+        ax__config_win_size(s, d);
+        break;
+    case M_RECT_SIZE:
+        it->desc->r.size = d;
+        break;
+    default: break;
+    }
+}
+
 static void integer(struct ax_state* s, struct ax_interp* it, long v)
 {
-    (void) s;
     switch (it->mode) {
-    case M_DIM_W:
-        it->dim.w = v;
-        it->mode = M_DIM_H;
+
+    case M_SET_DIM:
+    case M_WIN_SIZE:
+    case M_RECT_SIZE:
+        switch (it->i++) {
+        case 0:
+            it->dim.w = v;
+            break;
+        case 1:
+            it->dim.h = v;
+            dim(s, it, it->dim);
+            break;
+        default: break;
+        }
         break;
-    case M_DIM_H:
-        it->dim.h = v;
-        //printf("[LOG] dim: %.2fx%.2f\n", it->dim.w, it->dim.h);
-        break;
+
     case M_GROW:
         it->desc->flex_attrs.grow = v;
         break;
@@ -227,9 +254,9 @@ static void integer(struct ax_state* s, struct ax_interp* it, long v)
     case M_TEXT_COLOR:
     case M_BACKGROUND:
         // (rgb ...) form
-        it->col.rgb[it->col.rgb_idx++] = v < 0 ? 0 : v > 255 ? 255 : v;
-        if (it->col.rgb_idx >= 3) {
-            color(it, ax_color_from_rgb(it->col.rgb));
+        it->rgb[it->i++] = v < 0 ? 0 : v > 255 ? 255 : v;
+        if (it->i >= 3) {
+            color(it, ax_color_from_rgb(it->rgb));
         }
         break;
 

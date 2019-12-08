@@ -24,6 +24,8 @@ struct ax_state {
     struct ax_draw_buf* draw_buf;
 };
 
+void ax__initialize_backend(struct ax_state* s);
+
 void ax__set_error(struct ax_state* s, const char* err);
 void ax__set_dim(struct ax_state* s, struct ax_dim dim);
 void ax__set_root(struct ax_state* s, const struct ax_desc* root);

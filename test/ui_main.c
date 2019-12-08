@@ -26,6 +26,7 @@ static int build_example(struct ax_state* ax, size_t n)
     for (size_t i = 0; i < n; i++) {
         s += sprintf(s,
                      "(text \"Hewwo?!\""
+                     "      (color (rgb 0 128 255))"
                      "      (font \"size:%zu,path:" ROBOTO "\"))",
                      10 + i * 5);
     }
@@ -51,20 +52,13 @@ int main(int argc, char** argv)
 
     struct ax_state* ax = ax_new_state();
 
-    if ((rv = build_example(ax, 10)) != 0) {
-        goto err;
+    if ((rv = ax_write(ax, "(init (window-size 400 300))")) != 0 ||
+        (rv = build_example(ax, 10)) != 0 ||
+        (rv = ax_event_loop(ax)) != 0)
+    {
+        fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
     }
 
-    if ((rv = ax_event_loop(ax)) != 0) {
-        goto err;
-    }
-
-    goto cleanup;
-
-err:
-    fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
-
-cleanup:
     ax_destroy_state(ax);
     return rv;
 }

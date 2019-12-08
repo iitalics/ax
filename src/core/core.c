@@ -29,14 +29,14 @@ struct ax_state* ax_new_state()
     s->config = (struct ax_backend_config) {
         .win_size = AX_DIM(800, 600),
     };
+    s->backend = NULL;
 
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
     ax__init_tree(s->tree = &e->t);
+    ax__build_node(s, s->tree, &AX_DESC_EMPTY_CONTAINER);
     ax__init_geom(s->geom = &e->g);
     ax__init_draw_buf(s->draw_buf = &e->d);
-    ax__set_root(s, &AX_DESC_EMPTY_CONTAINER);
-    s->backend = ax__create_backend(s);
     return s;
 }
 
@@ -54,8 +54,16 @@ void ax_destroy_state(struct ax_state* s)
     }
 }
 
+void ax__initialize_backend(struct ax_state* s)
+{
+    ASSERT(s->backend == NULL, "backend already initialized");
+    s->backend = ax__create_backend(s);
+    s->geom->root_dim = s->config.win_size;
+}
+
 void ax__set_error(struct ax_state* s, const char* err)
 {
+    free(s->err_msg);
     s->err_msg = malloc(strlen(err) + 1);
     ASSERT(s->err_msg != NULL, "malloc ax_state.err_msg");
     strcpy(s->err_msg, err);
@@ -135,6 +143,9 @@ void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 
 void ax__set_root(struct ax_state* s, const struct ax_desc* root)
 {
+    // TODO: make this an error code, not an assert
+    ASSERT(s->backend != NULL, "backend must be initialized");
+
     ax__tree_clear(s->tree);
     node_id r = ax__build_node(s, s->tree, root);
     ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root");

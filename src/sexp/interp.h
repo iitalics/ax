@@ -20,12 +20,10 @@ struct ax_interp {
 
     // for parsing primitive types
     int mode;
+    size_t i;
     union {
         struct ax_dim dim;
-        struct {
-            uint8_t rgb[3];
-            size_t rgb_idx;
-        } col;
+        uint8_t rgb[3];
     };
 };
 
