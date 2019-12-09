@@ -1,9 +1,9 @@
 #pragma once
 #include "ax.h"
-#include "geom/text.h" // TODO: don't depend on text.h
 
 struct ax_backend;
 struct ax_font;
+struct ax_text_metrics;
 
 /*
  * Backend

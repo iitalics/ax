@@ -3,7 +3,7 @@
 
 struct ax_font;
 
-typedef ax_length (*ax_text_measure_fn)(const char*, struct ax_font*);
+typedef ax_length (*ax_text_measure_fn)(const char*, void*);
 
 struct ax_text_iter {
     const char* text;

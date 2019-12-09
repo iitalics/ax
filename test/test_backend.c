@@ -2,6 +2,7 @@
 #include "../src/core.h"
 #include "../src/backend.h"
 #include "../src/utils.h"
+#include "../src/geom/text.h"
 
 struct ax_backend {};
 static struct ax_backend the_backend;

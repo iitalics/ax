@@ -6,15 +6,16 @@
 #include "../backend.h"
 #include "../utils.h"
 
-static ax_length dummy_measure_fn(const char* str, struct ax_font* ud)
+static ax_length dummy_measure_fn(const char* str, void* ud)
 {
     (void) ud;
     (void) str;
     return 0.0;
 }
 
-static ax_length font_measure_fn(const char* str, struct ax_font* font)
+static ax_length font_measure_fn(const char* str, void* ud)
 {
+    struct ax_font* font = ud;
     struct ax_text_metrics tm;
     ax__measure_text(font, str, &tm);
     return tm.width;
