@@ -7,6 +7,7 @@ cc_flags	= -std=c99 -g -fPIC \
 			-Wall -Wshadow -Wpointer-arith  -Wstrict-prototypes \
 			-Wmissing-prototypes -Wfloat-equal \
 			-Werror=implicit-function-declaration
+so_flags	= -shared -undefined dynamic_lookup
 
 srcs		= $(shell ${find_srcs})
 gen		= _build/parser_rules.inc
@@ -84,7 +85,7 @@ TAGS: ${tags_srcs}
 _build/lib/libaxl.so: ${gen} ${objs}
 	@mkdir -p $(dir $@)
 	@echo "LD $(notdir $@)"
-	@${ld} -shared -o $@ ${objs}
+	@${ld} ${so_flags} -o $@ ${objs}
 
 _build/lib/libaxl_SDL.so: lib = $@
 _build/lib/libaxl_SDL.so: src = backend/sdl.c
@@ -93,4 +94,4 @@ _build/lib/libaxl_SDL.so: ${src}
 	@mkdir -p $(dir ${src})
 	@echo "LD $(notdir ${src})"
 	@${cpp} -MM -MT $@ -MF ${dep} ${src}
-	@${ld} -shared $(shell pkg-config -libs -cflags sdl2 SDL2_ttf) -o $@ ${src}
+	@${ld} ${so_flags} $(shell pkg-config -libs -cflags sdl2 SDL2_ttf) -o $@ ${src}
