@@ -3,6 +3,7 @@
 #include "utils.h"
 
 struct ax_state;
+struct ax_backend;
 struct ax_desc;
 struct ax_font;
 
@@ -91,7 +92,9 @@ void ax__tree_clear(struct ax_tree* tr);
 void ax__free_node(struct ax_node* node);
 void ax__free_node_t_line(struct ax_node_t_line* line);
 
-int ax__build_node(struct ax_state* s, struct ax_tree* tr,
+int ax__build_node(struct ax_state* s,     // used for ax__set_error()
+                   struct ax_backend* bac, // used to load fonts
+                   struct ax_tree* tr,
                    const struct ax_desc* desc,
                    node_id* out_id);
 

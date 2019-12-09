@@ -22,14 +22,16 @@ void ax__destroy_backend(struct ax_backend* bac)
     (void) bac;
 }
 
-int ax__event_loop(struct ax_state* s)
+int ax__event_loop(struct ax_state* s, struct ax_backend* bac)
 {
     (void) s;
     NOT_IMPL();
 }
 
-int ax__create_font(struct ax_state* s, const char* desc, struct ax_font** out_font)
+int ax__create_font(struct ax_state* s, struct ax_backend* bac,
+                    const char* desc, struct ax_font** out_font)
 {
+    (void) bac;
     // "size:<N>"
     if (strncmp(desc, "size:", 5) != 0) {
         ax__set_error(s, "invalid fake font");

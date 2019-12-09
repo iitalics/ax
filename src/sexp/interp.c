@@ -129,6 +129,7 @@ static void begin_node(struct ax_interp* it, enum ax_node_type ty)
 
 static void set_root(struct ax_state* s, struct ax_interp* it)
 {
+    struct ax_backend* bac = s->backend;
     if (!ax__is_backend_initialized(s)) {
 #define STR "backend not initialized"
         it->err_msg = malloc(strlen(STR) + 1);
@@ -141,7 +142,7 @@ static void set_root(struct ax_state* s, struct ax_interp* it)
     struct ax_tree tree;
     ax__init_tree(&tree);
     node_id root;
-    int r = ax__build_node(s, &tree, it->desc, &root);
+    int r = ax__build_node(s, bac, &tree, it->desc, &root);
     if (r != 0) {
         it->err = r;
         goto cleanup2;

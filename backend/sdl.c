@@ -142,8 +142,9 @@ sdl_err:
     return 1;
 }
 
-int ax__event_loop(struct ax_state* ax)
+int ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
 {
+    (void) bac;
     for (;;) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -173,9 +174,13 @@ int ax__event_loop(struct ax_state* ax)
     }
 }
 
-int ax__create_font(struct ax_state* ax, const char* description,
+int ax__create_font(struct ax_state* ax,
+                    struct ax_backend* bac,
+                    const char* description,
                     struct ax_font** out_font)
 {
+    (void) bac;
+
     // "size:<N>,path:<PATH>"
     char* s = (char*) description;
     if (strncmp(s, "size:", 5) != 0) {

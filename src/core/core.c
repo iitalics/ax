@@ -37,7 +37,9 @@ struct ax_state* ax_new_state()
     int r;
     node_id root;
     ax__init_tree(s->tree = &e->t);
-    r = ax__build_node(s, s->tree, &AX_DESC_EMPTY_CONTAINER, &root);
+    // NULL is only okay here because its an empty container
+    // (this is handled badly, there should be a better way)
+    r = ax__build_node(s, NULL, s->tree, &AX_DESC_EMPTY_CONTAINER, &root);
     ASSERT(r == 0, "build empty tree");
 
     ax__init_geom(s->geom = &e->g);
@@ -79,7 +81,8 @@ void ax__set_error(struct ax_state* s, const char* err)
 
 int ax_event_loop(struct ax_state* s)
 {
-    return ax__event_loop(s);
+    ASSERT(ax__is_backend_initialized(s), "backend needs to be initialized");
+    return ax__event_loop(s, s->backend);
 }
 
 const char* ax_get_error(struct ax_state* s)
@@ -155,8 +158,6 @@ void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 
 void ax__set_tree(struct ax_state* s, struct ax_tree* tree)
 {
-    ASSERT(s->backend != NULL, "backend must be initialized");
-
     ax__free_tree(s->tree);
     memcpy(s->tree, tree, sizeof(struct ax_tree));
     ax__init_tree(tree);

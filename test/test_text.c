@@ -2,7 +2,7 @@
 #include "../src/geom/text.h"
 #include "../src/utils.h"
 #include "../src/backend.h"
-
+#include "../src/core.h"
 
 TEST(text_3_words)
 {
@@ -67,7 +67,7 @@ TEST(text_linebreak_width)
 {
     struct ax_state* s = ax_new_state();
     struct ax_font* f;
-    ax__create_font(s, "size:10", &f);
+    ax__create_font(s, NULL, "size:10", &f);
     struct ax_text_iter ti;
     enum ax_text_elem e;
     ax__text_iter_init(&ti, "Foo bar baz bang. Superlongword.");

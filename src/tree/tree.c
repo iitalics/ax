@@ -57,7 +57,9 @@ void ax__free_node_t_line(struct ax_node_t_line* line)
 }
 
 
-int ax__build_node(struct ax_state* s, struct ax_tree* tr,
+int ax__build_node(struct ax_state* s,
+                   struct ax_backend* bac,
+                   struct ax_tree* tr,
                    const struct ax_desc* desc,
                    node_id* out_id)
 {
@@ -84,7 +86,7 @@ int ax__build_node(struct ax_state* s, struct ax_tree* tr,
         {
             // TODO: no recursion!
             node_id child_id;
-            int r = ax__build_node(s, tr, child_desc, &child_id);
+            int r = ax__build_node(s, bac, tr, child_desc, &child_id);
             if (r != 0) {
                 return r;
             }
@@ -111,7 +113,7 @@ int ax__build_node(struct ax_state* s, struct ax_tree* tr,
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
         struct ax_font* font = NULL;
-        int r = ax__create_font(s, desc->t.font_name, &font);
+        int r = ax__create_font(s, bac, desc->t.font_name, &font);
         if (r != 0) {
             return r;
         }
