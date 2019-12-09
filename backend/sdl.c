@@ -23,7 +23,7 @@ static void free_backend(struct ax_backend* b)
     SDL_Quit();
 }
 
-struct ax_backend* ax__create_backend(struct ax_state* ax)
+int ax__create_backend(struct ax_state* ax, struct ax_backend** out_bac)
 {
     struct ax_backend b = { .window = NULL, .render = NULL };
 
@@ -47,17 +47,17 @@ struct ax_backend* ax__create_backend(struct ax_state* ax)
     struct ax_backend* bac = malloc(sizeof(struct ax_backend));
     ASSERT(bac != NULL, "malloc ax_backend (SDL)");
     *bac = b;
-    return bac;
+    *out_bac = bac;
+    return 0;
 
 ttf_err:
     ax__set_error(ax, TTF_GetError());
-    goto cleanup;
+    goto err;
 sdl_err:
     ax__set_error(ax, SDL_GetError());
-    goto cleanup;
-cleanup:
+err:
     free_backend(&b);
-    return NULL;
+    return 1;
 }
 
 void ax__destroy_backend(struct ax_backend* bac)
@@ -173,8 +173,8 @@ int ax__event_loop(struct ax_state* ax)
     }
 }
 
-struct ax_font* ax__create_font(struct ax_state* ax,
-                                const char* description)
+int ax__create_font(struct ax_state* ax, const char* description,
+                    struct ax_font** out_font)
 {
     // "size:<N>,path:<PATH>"
     char* s = (char*) description;
@@ -189,12 +189,13 @@ struct ax_font* ax__create_font(struct ax_state* ax,
     void* f = TTF_OpenFont(path, size);
     if (f == NULL) {
         ax__set_error(ax, TTF_GetError());
-        return NULL;
+        return 1;
     }
-    return f;
+    *out_font = f;
+    return 0;
 err:
     ax__set_error(ax, "invalid font description");
-    return NULL;
+    return 1;
 }
 
 void ax__destroy_font(struct ax_font* font)

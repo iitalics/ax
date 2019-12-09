@@ -57,7 +57,8 @@ void ax_destroy_state(struct ax_state* s)
 void ax__initialize_backend(struct ax_state* s)
 {
     ASSERT(s->backend == NULL, "backend already initialized");
-    s->backend = ax__create_backend(s);
+    int r = ax__create_backend(s, &s->backend);
+    ASSERT(r == 0, "create backend: %s", ax_get_error(s));
     s->geom->root_dim = s->config.win_size;
 }
 
