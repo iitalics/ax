@@ -326,19 +326,21 @@ syntax_err: {
             // TODO: generate state names
         default: ctx = "???";
         }
-#define FMT "invalid syntax, expected %s"
+#define FMT "syntax error: expected %s"
         size_t len = strlen(FMT) - 2 + strlen(ctx);
         it->err_msg = malloc(len + 1);
         sprintf(it->err_msg, FMT, ctx);
+        it->err = 1;
         return;
 #undef FMT
     }
 
 token_err: {
-#define FMT "parse erorr: %s"
+#define FMT "syntax error: %s"
         size_t len = strlen(FMT) - 2 + strlen(lex->str);
         it->err_msg = malloc(len + 1);
         sprintf(it->err_msg, FMT, lex->str);
+        it->err = 1;
         return;
 #undef FMT
     }

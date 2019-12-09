@@ -52,3 +52,22 @@ TEST(die_recover)
     CHECK_IEQ(r, 0);
     CHECK_SZEQ(s->tree->count, (size_t) 3);
 }
+
+TEST(die_parse_error_fails_early)
+{
+    struct ax_state* s = ax_new_state();
+    int r = ax_write(s, "$ (init)");
+    CHECK_IEQ(r, 1);
+    CHECK_STREQ(ax_get_error(s), "syntax error: invalid character `$'");
+    CHECK_FALSE(ax__is_backend_initialized(s));
+}
+
+TEST(die_syntax_error_fails_early)
+{
+    struct ax_state* s = ax_new_state();
+    int r = ax_write(s, "(foo) (init)");
+    CHECK_IEQ(r, 1);
+    // TODO: meaningful error message
+    CHECK_STREQ(ax_get_error(s), "syntax error: expected ???");
+    CHECK_FALSE(ax__is_backend_initialized(s));
+}
