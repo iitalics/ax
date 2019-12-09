@@ -88,7 +88,7 @@ static int draw(struct ax_state* ax)
     SDL_SetRenderDrawColor(ax->backend->render, 0xff, 0xff, 0xff, 0xff);
     SDL_RenderClear(ax->backend->render);
 
-    const struct ax_draw_buf* draw = ax_draw(ax);
+    const struct ax_draw_buf* draw = ax__draw(ax);
     for (size_t i = 0; i < draw->len; i++) {
         struct ax_draw d = draw->data[i];
         switch (d.ty) {

@@ -96,11 +96,6 @@ const char* ax_get_error(struct ax_state* s)
     }
 }
 
-const struct ax_draw_buf* ax_draw(struct ax_state* s)
-{
-    return s->draw_buf;
-}
-
 void ax_write_start(struct ax_state* s)
 {
     ax__free_interp(s->interp);

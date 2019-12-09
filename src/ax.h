@@ -1,5 +1,4 @@
 #pragma once
-#include "base.h"
 
 /*
  * Setup and teardown
@@ -24,9 +23,3 @@ void ax_write_start(struct ax_state* s);
 int ax_write_chunk(struct ax_state* s, const char* input);
 int ax_write_end(struct ax_state* s);
 int ax_write(struct ax_state* s, const char* input);
-
-/*
- * Drawing
- */
-
-const struct ax_draw_buf* ax_draw(struct ax_state* s);

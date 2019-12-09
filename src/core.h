@@ -43,3 +43,9 @@ void ax__config_win_size(struct ax_state* s, struct ax_dim d)
 {
     s->config.win_size = d;
 }
+
+static inline
+const struct ax_draw_buf* ax__draw(struct ax_state* s)
+{
+    return s->draw_buf;
+}
