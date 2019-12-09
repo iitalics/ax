@@ -56,7 +56,10 @@ void ax__free_node_t_line(struct ax_node_t_line* line)
     }
 }
 
-node_id ax__build_node(struct ax_state* s, struct ax_tree* tr, const struct ax_desc* desc)
+
+int ax__build_node(struct ax_state* s, struct ax_tree* tr,
+                   const struct ax_desc* desc,
+                   node_id* out_id)
 {
     // NOT a stack-less traversal :(
 
@@ -80,7 +83,11 @@ node_id ax__build_node(struct ax_state* s, struct ax_tree* tr, const struct ax_d
              child_desc = child_desc->flex_attrs.next_child)
         {
             // TODO: no recursion!
-            node_id child_id = ax__build_node(s, tr, child_desc);
+            node_id child_id;
+            int r = ax__build_node(s, tr, child_desc, &child_id);
+            if (r != 0) {
+                return r;
+            }
             struct ax_node* child = ax__node_by_id(tr, child_id);
             child->grow_factor = child_desc->flex_attrs.grow;
             child->shrink_factor = child_desc->flex_attrs.shrink;
@@ -103,9 +110,11 @@ node_id ax__build_node(struct ax_state* s, struct ax_tree* tr, const struct ax_d
         char* text = malloc(strlen(desc->t.text) + 1);
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
-        struct ax_font* font;
+        struct ax_font* font = NULL;
         int r = ax__create_font(s, desc->t.font_name, &font);
-        ASSERT(r == 0, "create font: %s", ax_get_error(s));
+        if (r != 0) {
+            return r;
+        }
         node->t = (struct ax_node_t) {
             .color = desc->t.color,
             .text = text,
@@ -117,5 +126,6 @@ node_id ax__build_node(struct ax_state* s, struct ax_tree* tr, const struct ax_d
 
     default: NO_SUCH_NODE_TAG();
     }
-    return id;
+    *out_id = id;
+    return 0;
 }

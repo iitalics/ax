@@ -4,7 +4,6 @@
 #include "../tree/desc.h"
 
 enum ax_interp_mode {
-    M_NONE = 0,
     M_LOG,
     M_DIE,
     M_TEXT,
@@ -24,12 +23,12 @@ enum ax_interp_mode {
 
 void ax__init_interp(struct ax_interp* it)
 {
+    it->err = 0;
+    it->err_msg = NULL;
+
     it->state = 0;
     it->ctx = -1;
     it->ctx_sp = 0;
-
-    it->mode = M_NONE;
-    it->err_msg = NULL;
 
     it->desc = NULL;
     it->parent_desc = NULL;
@@ -76,7 +75,14 @@ static void pop_ctx(struct ax_interp* it)
 
 static void end_init(struct ax_state* s, struct ax_interp* it)
 {
-    (void) it;
+    if (ax__is_backend_initialized(s)) {
+#define STR "backend already initialized"
+        it->err_msg = malloc(strlen(STR) + 1);
+        strcpy(it->err_msg, STR);
+        it->err = 1;
+        return;
+#undef STR
+    }
     ax__initialize_backend(s);
 }
 
@@ -121,14 +127,30 @@ static void begin_node(struct ax_interp* it, enum ax_node_type ty)
     it->desc = desc;
 }
 
-/* static void set_dim(struct ax_state* s, struct ax_interp* it) */
-/* { */
-/*     ax__set_dim(s, it->dim); */
-/* } */
-
 static void set_root(struct ax_state* s, struct ax_interp* it)
 {
-    ax__set_root(s, it->desc);
+    if (!ax__is_backend_initialized(s)) {
+#define STR "backend not initialized"
+        it->err_msg = malloc(strlen(STR) + 1);
+        strcpy(it->err_msg, STR);
+        it->err = 1;
+        goto cleanup1;
+#undef STR
+    }
+
+    struct ax_tree tree;
+    ax__init_tree(&tree);
+    node_id root;
+    int r = ax__build_node(s, &tree, it->desc, &root);
+    if (r != 0) {
+        it->err = r;
+        goto cleanup2;
+    }
+    ax__set_tree(s, &tree);
+
+cleanup2:
+    ax__free_tree(&tree);
+cleanup1:
     reset_desc(it);
 }
 
@@ -180,12 +202,15 @@ static void color(struct ax_interp* it, ax_color col)
 
 static void string(struct ax_state* s, struct ax_interp* it, const char* str)
 {
+    (void) s;
     switch (it->mode) {
     case M_LOG:
         printf("[LOG] %s\n", str);
         break;
     case M_DIE:
-        ax__set_error(s, str);
+        it->err_msg = malloc(strlen(str) + 1);
+        strcpy((char*) it->err_msg, str);
+        it->err = 1;
         break;
     case M_TEXT:
         it->desc->t.text = malloc(strlen(str) + 1);
@@ -279,21 +304,20 @@ static void cont_set_single_line(struct ax_interp* it, bool s)
     it->desc->c.single_line = s;
 }
 
-int ax__interp(struct ax_state* s,
-               struct ax_interp* it,
-               struct ax_lexer* lex, enum ax_parse tok)
+void ax__interp(struct ax_state* s,
+                struct ax_interp* it,
+                struct ax_lexer* lex, enum ax_parse tok)
 {
-    if (tok == AX_PARSE_NOTHING) {
-        goto ok;
-    }
-    if (it->err_msg != NULL) {
-        goto err;
-    }
+    ASSERT(it->err == 0, "error bit should not be set");
+    ASSERT(tok != AX_PARSE_NOTHING, "table doesn't handle NOTHING tokens");
+
     if (tok == AX_PARSE_ERROR) {
         goto token_err;
     }
 
 #include "../../_build/parser_rules.inc"
+
+ok: return;
 
 syntax_err: {
         const char* ctx;
@@ -305,7 +329,7 @@ syntax_err: {
         size_t len = strlen(FMT) - 2 + strlen(ctx);
         it->err_msg = malloc(len + 1);
         sprintf(it->err_msg, FMT, ctx);
-        goto err;
+        return;
 #undef FMT
     }
 
@@ -314,13 +338,7 @@ token_err: {
         size_t len = strlen(FMT) - 2 + strlen(lex->str);
         it->err_msg = malloc(len + 1);
         sprintf(it->err_msg, FMT, lex->str);
-        goto err;
+        return;
 #undef FMT
     }
-
-err:
-    return 1;
-
-ok:
-    return 0;
 }

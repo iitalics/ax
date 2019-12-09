@@ -91,8 +91,9 @@ void ax__tree_clear(struct ax_tree* tr);
 void ax__free_node(struct ax_node* node);
 void ax__free_node_t_line(struct ax_node_t_line* line);
 
-node_id ax__build_node(struct ax_state* s, struct ax_tree* tr,
-                       const struct ax_desc* desc);
+int ax__build_node(struct ax_state* s, struct ax_tree* tr,
+                   const struct ax_desc* desc,
+                   node_id* out_id);
 
 static inline
 struct ax_node* ax__node_by_id(struct ax_tree* tree, node_id id)

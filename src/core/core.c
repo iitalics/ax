@@ -33,10 +33,17 @@ struct ax_state* ax_new_state()
 
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
+
+    int r;
+    node_id root;
     ax__init_tree(s->tree = &e->t);
-    ax__build_node(s, s->tree, &AX_DESC_EMPTY_CONTAINER);
+    r = ax__build_node(s, s->tree, &AX_DESC_EMPTY_CONTAINER, &root);
+    ASSERT(r == 0, "build empty tree");
+
     ax__init_geom(s->geom = &e->g);
+
     ax__init_draw_buf(s->draw_buf = &e->d);
+
     return s;
 }
 
@@ -98,17 +105,22 @@ void ax_write_start(struct ax_state* s)
     ax__lexer_eof(s->lexer);
 }
 
+static int write_token(struct ax_state* s, enum ax_parse tok)
+{
+    if (s->interp->err == 0 && tok != AX_PARSE_NOTHING) {
+        ax__interp(s, s->interp, s->lexer, tok);
+    }
+    return s->interp->err;
+}
+
 int ax_write_chunk(struct ax_state* s, const char* input)
 {
     char* acc = (char*) input;
     char const* end = input + strlen(input);
     while (acc < end) {
-        enum ax_parse p = ax__lexer_feed(s->lexer, acc, &acc);
-        if (p != AX_PARSE_NOTHING) {
-            int r = ax__interp(s, s->interp, s->lexer, p);
-            if (r != 0) {
-                return r;
-            }
+        int r = write_token(s, ax__lexer_feed(s->lexer, acc, &acc));
+        if (r != 0) {
+            return r;
         }
     }
     return 0;
@@ -116,8 +128,7 @@ int ax_write_chunk(struct ax_state* s, const char* input)
 
 int ax_write_end(struct ax_state* s)
 {
-    enum ax_parse p = ax__lexer_eof(s->lexer);
-    return ax__interp(s, s->interp, s->lexer, p);
+    return write_token(s, ax__lexer_eof(s->lexer));
 }
 
 int ax_write(struct ax_state* s, const char* input)
@@ -142,13 +153,22 @@ void ax__set_dim(struct ax_state* s, struct ax_dim dim)
     invalidate(s);
 }
 
-void ax__set_root(struct ax_state* s, const struct ax_desc* root)
+void ax__set_tree(struct ax_state* s, struct ax_tree* tree)
 {
-    // TODO: make this an error code, not an assert
     ASSERT(s->backend != NULL, "backend must be initialized");
 
-    ax__tree_clear(s->tree);
-    node_id r = ax__build_node(s, s->tree, root);
-    ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root");
+    ax__free_tree(s->tree);
+    memcpy(s->tree, tree, sizeof(struct ax_tree));
+    ax__init_tree(tree);
     invalidate(s);
 }
+
+/* void ax__set_root(struct ax_state* s, const struct ax_desc* root) */
+/* { */
+/*     ASSERT(s->backend != NULL, "backend must be initialized"); */
+
+/*     ax__tree_clear(s->tree); */
+/*     node_id r = ax__build_node(s, s->tree, root); */
+/*     ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root"); */
+/*     invalidate(s); */
+/* } */

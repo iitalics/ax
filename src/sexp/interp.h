@@ -6,6 +6,7 @@ struct ax_state;
 struct ax_desc;
 
 struct ax_interp {
+    int err;
     char* err_msg;
 
     // for sexp lexer
@@ -30,6 +31,6 @@ struct ax_interp {
 void ax__init_interp(struct ax_interp* it);
 void ax__free_interp(struct ax_interp* it);
 
-int ax__interp(struct ax_state* s,
-               struct ax_interp* it,
-               struct ax_lexer* lex, enum ax_parse tok);
+void ax__interp(struct ax_state* s,
+                struct ax_interp* it,
+                struct ax_lexer* lex, enum ax_parse tok);

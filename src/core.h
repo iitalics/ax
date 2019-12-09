@@ -24,11 +24,19 @@ struct ax_state {
     struct ax_draw_buf* draw_buf;
 };
 
+void ax__set_error(struct ax_state* s, const char* err);
+
 void ax__initialize_backend(struct ax_state* s);
 
-void ax__set_error(struct ax_state* s, const char* err);
+static inline
+bool ax__is_backend_initialized(struct ax_state* s)
+{
+    return s->backend != NULL;
+}
+
 void ax__set_dim(struct ax_state* s, struct ax_dim dim);
-void ax__set_root(struct ax_state* s, const struct ax_desc* root);
+
+void ax__set_tree(struct ax_state* s, struct ax_tree* tree);
 
 static inline
 void ax__config_win_size(struct ax_state* s, struct ax_dim d)
