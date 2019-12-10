@@ -18,6 +18,7 @@ TEST(die_set_root_no_init)
     struct ax_state* s = ax_new_state();
     int r = ax_write(s, "(set-root (rect))");
     CHECK_IEQ(r, 1);
+    ax_destroy_state(s);
 }
 
 TEST(die_event_loop_no_init)
@@ -25,6 +26,7 @@ TEST(die_event_loop_no_init)
     struct ax_state* s = ax_new_state();
     int r = ax_event_loop(s);
     CHECK_IEQ(r, 1);
+    ax_destroy_state(s);
 }
 
 TEST(die_two_init)
@@ -32,6 +34,7 @@ TEST(die_two_init)
     struct ax_state* s = ax_new_state();
     int r = ax_write(s, "(init) (init)");
     CHECK_IEQ(r, 1);
+    ax_destroy_state(s);
 }
 
 TEST(die_font_bad_spec_error)
@@ -47,6 +50,7 @@ TEST(die_font_bad_spec_error)
     CHECK_IEQ(r, 1);
     CHECK_STREQ(ax_get_error(s), "invalid fake font");
     CHECK_SZEQ(s->tree->count, (size_t) 1);
+    ax_destroy_state(s);
 }
 
 TEST(die_recover)
@@ -58,6 +62,7 @@ TEST(die_recover)
     r = ax_write(s, "(set-root (container (children (rect) (rect))))");
     CHECK_IEQ(r, 0);
     CHECK_SZEQ(s->tree->count, (size_t) 3);
+    ax_destroy_state(s);
 }
 
 TEST(die_parse_error_fails_early)
@@ -67,6 +72,7 @@ TEST(die_parse_error_fails_early)
     CHECK_IEQ(r, 1);
     CHECK_STREQ(ax_get_error(s), "syntax error: invalid character `$'");
     CHECK_FALSE(ax__is_backend_initialized(s));
+    ax_destroy_state(s);
 }
 
 TEST(die_syntax_error_fails_early)
@@ -77,4 +83,5 @@ TEST(die_syntax_error_fails_early)
     // TODO: meaningful error message
     CHECK_STREQ(ax_get_error(s), "syntax error: expected ???");
     CHECK_FALSE(ax__is_backend_initialized(s));
+    ax_destroy_state(s);
 }
