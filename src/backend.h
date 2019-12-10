@@ -9,7 +9,7 @@ struct ax_text_metrics;
  * Backend
  */
 
-int ax__create_backend(struct ax_state* s, struct ax_backend** out_bac);
+int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac);
 void ax__destroy_backend(struct ax_backend* bac);
 
 int ax__event_loop(struct ax_state* s,

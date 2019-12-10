@@ -24,7 +24,7 @@ static void free_backend(struct ax_backend* b)
     SDL_Quit();
 }
 
-int ax__create_backend(struct ax_state* ax, struct ax_backend** out_bac)
+int ax__new_backend(struct ax_state* ax, struct ax_backend** out_bac)
 {
     struct ax_backend b = { .window = NULL, .render = NULL };
 

@@ -11,7 +11,7 @@ struct ax_font {
     ax_length size;
 };
 
-int ax__create_backend(struct ax_state* s, struct ax_backend** out_bac)
+int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
 {
     (void) s;
     *out_bac = &the_backend;
