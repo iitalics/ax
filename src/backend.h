@@ -20,9 +20,9 @@ int ax__event_loop(struct ax_state* s,
  */
 
 int ax__new_font(struct ax_state* s, // used for ax__set_error()
-                    struct ax_backend* bac,
-                    const char* description,
-                    struct ax_font** out_font);
+                 struct ax_backend* bac,
+                 const char* description,
+                 struct ax_font** out_font);
 
 void ax__destroy_font(struct ax_font* font);
 

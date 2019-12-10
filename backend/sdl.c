@@ -89,7 +89,7 @@ static int draw(struct ax_state* ax)
     SDL_SetRenderDrawColor(ax->backend->render, 0xff, 0xff, 0xff, 0xff);
     SDL_RenderClear(ax->backend->render);
 
-    const struct ax_draw_buf* draw = ax__draw(ax);
+    const struct ax_draw_buf* draw = ax->draw_buf;
     for (size_t i = 0; i < draw->len; i++) {
         struct ax_draw d = draw->data[i];
         switch (d.ty) {
@@ -176,9 +176,9 @@ int ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
 }
 
 int ax__new_font(struct ax_state* ax,
-                    struct ax_backend* bac,
-                    const char* description,
-                    struct ax_font** out_font)
+                 struct ax_backend* bac,
+                 const char* description,
+                 struct ax_font** out_font)
 {
     (void) bac;
 
