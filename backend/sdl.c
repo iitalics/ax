@@ -2,6 +2,7 @@
 #include <SDL2/SDL_ttf.h>
 
 #include "../src/core.h"
+#include "../src/geom/text.h"
 #include "../src/draw.h"
 #include "../src/backend.h"
 #include "../src/utils.h"

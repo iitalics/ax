@@ -7,7 +7,8 @@ cc_flags	= -std=c99 -g -fPIC \
 			-Wall -Wshadow -Wpointer-arith  -Wstrict-prototypes \
 			-Wmissing-prototypes -Wfloat-equal \
 			-Werror=implicit-function-declaration
-so_flags	= -shared -undefined dynamic_lookup
+so_flags	= -shared \
+			-Wl,-flat_namespace,-undefined,dynamic_lookup
 
 srcs		= $(shell ${find_srcs})
 gen		= _build/parser_rules.inc
