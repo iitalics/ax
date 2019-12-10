@@ -3,9 +3,7 @@
 #include "../src/backend.h"
 #include "../src/utils.h"
 #include "../src/geom/text.h"
-
-struct ax_backend {};
-static struct ax_backend the_backend;
+#include "backend.h"
 
 struct ax_font {
     ax_length size;
@@ -14,18 +12,31 @@ struct ax_font {
 int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
 {
     (void) s;
-    *out_bac = &the_backend;
+    struct ax_backend* bac = malloc(sizeof(struct ax_backend));
+    ASSERT(bac != 0, "malloc fake ax_backend");
+    *bac = (struct ax_backend) {
+        .ds = NULL,
+        .ds_len = 0,
+    };
+    *out_bac = bac;
     return 0;
 }
 
 void ax__destroy_backend(struct ax_backend* bac)
 {
-    (void) bac;
+    free(bac);
 }
 
-void ax__event_loop(struct ax_state* s, struct ax_backend* bac)
+void ax__set_draws(struct ax_backend* bac,
+                   struct ax_draw* draws,
+                   size_t len)
 {
-    (void) s;
+    bac->ds = draws;
+    bac->ds_len = len;
+}
+
+void ax__event_loop(struct ax_backend* bac)
+{
     (void) bac;
     NOT_IMPL();
 }

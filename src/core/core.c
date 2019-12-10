@@ -85,7 +85,7 @@ int ax_event_loop(struct ax_state* s)
         ax__set_error(s, "backend is not initialized");
         return 1;
     }
-    ax__event_loop(s, s->backend);
+    ax__event_loop(s->backend);
     return 0;
 }
 
@@ -147,6 +147,7 @@ static void invalidate(struct ax_state* s)
 {
     ax__layout(s->tree, s->geom);
     ax__redraw(s->tree, s->draw_buf);
+    ax__set_draws(s->backend, s->draw_buf->data, s->draw_buf->len);
 }
 
 void ax__set_dim(struct ax_state* s, struct ax_dim dim)

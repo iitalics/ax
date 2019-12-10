@@ -1,11 +1,12 @@
 #include "helpers.h"
+#include "backend.h"
 #include "../src/ax.h"
 #include "../src/core.h"
 #include "../src/draw.h"
 #include "../src/utils.h"
 
-#define D(_idx) s->draw_buf->data[_idx]
-#define D_LEN() s->draw_buf->len
+#define D(_idx) s->backend->ds[_idx]
+#define D_LEN() s->backend->ds_len
 
 TEST(color_to_rgb)
 {
@@ -97,6 +98,7 @@ TEST(draw_3r_colors)
     CHECK_IEQ_HEX(D(0).r.fill, 0x123456);
     CHECK_TRUE(AX_COLOR_IS_NULL(D(1).r.fill));
     CHECK_IEQ_HEX(D(2).r.fill, 0x64c832);
+    ax_destroy_state(s);
 }
 
 TEST(draw_text_1l)
