@@ -23,9 +23,10 @@ void ax__destroy_backend(struct ax_backend* bac)
     (void) bac;
 }
 
-int ax__event_loop(struct ax_state* s, struct ax_backend* bac)
+void ax__event_loop(struct ax_state* s, struct ax_backend* bac)
 {
     (void) s;
+    (void) bac;
     NOT_IMPL();
 }
 

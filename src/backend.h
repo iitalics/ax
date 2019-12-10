@@ -12,7 +12,7 @@ struct ax_text_metrics;
 int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac);
 void ax__destroy_backend(struct ax_backend* bac);
 
-int ax__event_loop(struct ax_state* s,
+void ax__event_loop(struct ax_state* s,
                     struct ax_backend* bac);
 
 /*

@@ -81,8 +81,12 @@ void ax__set_error(struct ax_state* s, const char* err)
 
 int ax_event_loop(struct ax_state* s)
 {
-    ASSERT(ax__is_backend_initialized(s), "backend needs to be initialized");
-    return ax__event_loop(s, s->backend);
+    if (!ax__is_backend_initialized(s)) {
+        ax__set_error(s, "backend is not initialized");
+        return 1;
+    }
+    ax__event_loop(s, s->backend);
+    return 0;
 }
 
 const char* ax_get_error(struct ax_state* s)

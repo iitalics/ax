@@ -20,6 +20,13 @@ TEST(die_set_root_no_init)
     CHECK_IEQ(r, 1);
 }
 
+TEST(die_event_loop_no_init)
+{
+    struct ax_state* s = ax_new_state();
+    int r = ax_event_loop(s);
+    CHECK_IEQ(r, 1);
+}
+
 TEST(die_two_init)
 {
     struct ax_state* s = ax_new_state();

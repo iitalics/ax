@@ -84,25 +84,25 @@ static SDL_Color ax_color_to_sdl(ax_color c)
     }
 }
 
-static int draw(struct ax_state* ax)
+static void draw(struct ax_backend* bac,
+                 const struct ax_draw_buf* draw)
 {
-    SDL_SetRenderDrawColor(ax->backend->render, 0xff, 0xff, 0xff, 0xff);
-    SDL_RenderClear(ax->backend->render);
+    SDL_SetRenderDrawColor(bac->render, 0xff, 0xff, 0xff, 0xff);
+    SDL_RenderClear(bac->render);
 
-    const struct ax_draw_buf* draw = ax->draw_buf;
     for (size_t i = 0; i < draw->len; i++) {
         struct ax_draw d = draw->data[i];
         switch (d.ty) {
 
         case AX_DRAW_RECT: {
             SDL_Color color = ax_color_to_sdl(d.r.fill);
-            SDL_SetRenderDrawColor(ax->backend->render, color.r, color.g, color.b, color.a);
+            SDL_SetRenderDrawColor(bac->render, color.r, color.g, color.b, color.a);
             SDL_Rect r;
             r.x = d.r.bounds.o.x;
             r.y = d.r.bounds.o.y;
             r.w = d.r.bounds.s.w;
             r.h = d.r.bounds.s.h;
-            SDL_RenderFillRect(ax->backend->render, &r);
+            SDL_RenderFillRect(bac->render, &r);
             break;
         }
 
@@ -112,7 +112,7 @@ static int draw(struct ax_state* ax)
             if (sf == NULL) {
                 goto ttf_err;
             }
-            SDL_Texture* tx = SDL_CreateTextureFromSurface(ax->backend->render, sf);
+            SDL_Texture* tx = SDL_CreateTextureFromSurface(bac->render, sf);
             if (tx == NULL) {
                 SDL_FreeSurface(sf);
                 goto sdl_err;
@@ -122,7 +122,7 @@ static int draw(struct ax_state* ax)
             r.y = d.t.pos.y;
             r.w = sf->w;
             r.h = sf->h;
-            SDL_RenderCopy(ax->backend->render, tx, NULL, &r);
+            SDL_RenderCopy(bac->render, tx, NULL, &r);
             SDL_DestroyTexture(tx);
             SDL_FreeSurface(sf);
             break;
@@ -132,18 +132,16 @@ static int draw(struct ax_state* ax)
         }
     }
 
-    SDL_RenderPresent(ax->backend->render);
-    return 0;
+    SDL_RenderPresent(bac->render);
+    return;
 
 ttf_err:
-    ax__set_error(ax, TTF_GetError());
-    return 1;
+    ASSERT(0, "TTF: %s", TTF_GetError());
 sdl_err:
-    ax__set_error(ax, SDL_GetError());
-    return 1;
+    ASSERT(0, "SDL: %s", SDL_GetError());
 }
 
-int ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
+void ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
 {
     (void) bac;
     for (;;) {
@@ -151,11 +149,11 @@ int ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
             case SDL_QUIT:
-                return 0;
+                return;
             case SDL_KEYDOWN:
                 switch (ev.key.keysym.sym) {
                 case SDLK_q:
-                    return 0;
+                    return;
                 default: break;
                 }
                 break;
@@ -167,10 +165,7 @@ int ax__event_loop(struct ax_state* ax, struct ax_backend* bac)
         SDL_GetWindowSize(ax->backend->window, &win_w, &win_h);
         ax__set_dim(ax, AX_DIM(win_w, win_h));
 
-        int rv;
-        if ((rv = draw(ax)) != 0) {
-            return rv;
-        }
+        draw(ax->backend, ax->draw_buf);
         SDL_Delay(16);
     }
 }
