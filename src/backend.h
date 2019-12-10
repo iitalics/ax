@@ -19,7 +19,7 @@ int ax__event_loop(struct ax_state* s,
  * Fonts & text measurement
  */
 
-int ax__create_font(struct ax_state* s, // used for ax__set_error()
+int ax__new_font(struct ax_state* s, // used for ax__set_error()
                     struct ax_backend* bac,
                     const char* description,
                     struct ax_font** out_font);

@@ -113,7 +113,7 @@ int ax__build_node(struct ax_state* s,
         ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
         strcpy(text, desc->t.text);
         struct ax_font* font = NULL;
-        int r = ax__create_font(s, bac, desc->t.font_name, &font);
+        int r = ax__new_font(s, bac, desc->t.font_name, &font);
         if (r != 0) {
             return r;
         }

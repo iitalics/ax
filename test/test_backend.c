@@ -29,7 +29,7 @@ int ax__event_loop(struct ax_state* s, struct ax_backend* bac)
     NOT_IMPL();
 }
 
-int ax__create_font(struct ax_state* s, struct ax_backend* bac,
+int ax__new_font(struct ax_state* s, struct ax_backend* bac,
                     const char* desc, struct ax_font** out_font)
 {
     (void) bac;
