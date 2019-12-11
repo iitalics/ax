@@ -68,6 +68,20 @@ TEST(main_justify_around_2r)
 
 #undef JUSTIFY_TEST_2R
 
+TEST(resize_2r)
+{
+    struct ax_state* s = ax_new_state();
+    ax_write(s,
+             "(init (window-size 200 200))"
+             "(set-root"
+             " (container (children " TWO_RECTS ")"
+             "            (main-justify between)))");
+    CHECK_POSEQ(N(1)->coord, AX_POS(0, 0));
+    CHECK_POSEQ(N(2)->coord, AX_POS(140, 0));
+    ax__set_dim(s, AX_DIM(300, 300));
+    CHECK_POSEQ(N(1)->coord, AX_POS(0, 0));
+    CHECK_POSEQ(N(2)->coord, AX_POS(240, 0));
+}
 
 /* Fitting a single text node into a window */
 

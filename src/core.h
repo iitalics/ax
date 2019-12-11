@@ -7,6 +7,7 @@ struct ax_tree;
 struct ax_geom;
 struct ax_drawbuf;
 struct ax_desc;
+struct ax_async;
 
 struct ax_backend_config {
     struct ax_dim win_size;
@@ -22,6 +23,7 @@ struct ax_state {
     struct ax_tree* tree;
     struct ax_geom* geom;
     struct ax_draw_buf* draw_buf;
+    struct ax_async* async;
 };
 
 void ax__set_error(struct ax_state* s, const char* err);

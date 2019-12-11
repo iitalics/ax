@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "async.h"
 #include "../core.h"
 #include "../tree.h"
 #include "../tree/desc.h"
@@ -18,6 +19,7 @@ struct ax_state* ax_new_state()
         struct ax_tree t;
         struct ax_geom g;
         struct ax_draw_buf d;
+        struct ax_async a;
     };
 
     struct everything* e = malloc(sizeof(struct everything));
@@ -44,12 +46,15 @@ struct ax_state* ax_new_state()
 
     ax__init_draw_buf(s->draw_buf = &e->d);
 
+    ax__init_async(s, s->async = &e->a);
+
     return s;
 }
 
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
+        ax__free_async(s->async);
         ax__free_draw_buf(s->draw_buf);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
@@ -141,31 +146,13 @@ int ax_write(struct ax_state* s, const char* input)
     return ax_write_end(s);
 }
 
-static void invalidate(struct ax_state* s)
-{
-    ax__layout(s->tree, s->geom);
-    ax__redraw(s->tree, s->draw_buf);
-    ax__set_draws(s->backend, s->draw_buf->data, s->draw_buf->len);
-}
-
 void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 {
-    s->geom->root_dim = dim;
-    invalidate(s);
+    ax__sync_set_dim(s->async, dim);
 }
 
 void ax__set_tree(struct ax_state* s, struct ax_tree* new_tree)
 {
-    ax__tree_drain_from(s->tree, new_tree);
-    invalidate(s);
+    ax__sync_set_tree(s->async, new_tree);
+    ASSERT(ax__is_tree_empty(new_tree), "tree should be empty after setting");
 }
-
-/* void ax__set_root(struct ax_state* s, const struct ax_desc* root) */
-/* { */
-/*     ASSERT(s->backend != NULL, "backend must be initialized"); */
-
-/*     ax__tree_clear(s->tree); */
-/*     node_id r = ax__build_node(s, s->tree, root); */
-/*     ASSERT(ax__node_by_id(s->tree, r) == ax__root(s->tree), "init node should be root"); */
-/*     invalidate(s); */
-/* } */

@@ -3,7 +3,7 @@ cpp		= ${cc} -E
 ld		= ${cc}
 etags		= etags
 rkt 		= racket
-cc_flags	= -std=c99 -g -fPIC \
+cc_flags	= -std=c99 -g -pthread -fPIC \
 			-Wall -Wshadow -Wpointer-arith  -Wstrict-prototypes \
 			-Wmissing-prototypes -Wfloat-equal \
 			-Werror=implicit-function-declaration
@@ -83,16 +83,18 @@ TAGS: ${tags_srcs}
 
 # libraries
 
+_build/lib/libaxl.so: ld_flags = -pthread
 _build/lib/libaxl.so: ${gen} ${objs}
 	@mkdir -p $(dir $@)
 	@echo "LD $(notdir $@)"
-	@${ld} ${so_flags} -o $@ ${objs}
+	@${ld} ${so_flags} ${ld_flags} -o $@ ${objs}
 
 _build/lib/libaxl_SDL.so: lib = $@
 _build/lib/libaxl_SDL.so: src = backend/sdl.c
 _build/lib/libaxl_SDL.so: dep = _build/backend__sdl.dep
+_build/lib/libaxl_SDL.so: ld_flags = $(shell pkg-config -libs -cflags sdl2 SDL2_ttf)
 _build/lib/libaxl_SDL.so: ${src}
 	@mkdir -p $(dir ${src})
 	@echo "LD $(notdir ${src})"
 	@${cpp} -MM -MT $@ -MF ${dep} ${src}
-	@${ld} ${so_flags} $(shell pkg-config -libs -cflags sdl2 SDL2_ttf) -o $@ ${src}
+	@${ld} ${so_flags} ${ld_flags} -o $@ ${src}
