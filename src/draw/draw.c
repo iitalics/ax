@@ -69,6 +69,10 @@ static void redraw_(struct ax_node* node, struct ax_draw_buf* db)
 
 void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db)
 {
+    if (ax__is_tree_empty(tr)) {
+        return;
+    }
+
     DEFINE_TRAVERSAL_LOCALS(tr, node);
     db->len = 0;
     FOR_EACH_FROM_TOP(node) {

@@ -31,6 +31,14 @@ TEST(color_from_rgb)
     CHECK_IEQ_HEX(ax_color_from_rgb(rgb), 0x123456);
 }
 
+TEST(draw_empty)
+{
+    struct ax_state* s = ax_new_state();
+    ax_write(s, "(init)");
+    CHECK_SZEQ(D_LEN(), (size_t) 0);
+    ax_destroy_state(s);
+}
+
 TEST(draw_1r)
 {
     struct ax_state* s = ax_new_state();

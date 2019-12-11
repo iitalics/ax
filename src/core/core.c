@@ -34,13 +34,11 @@ struct ax_state* ax_new_state()
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
 
-    int r;
-    node_id root;
     ax__init_tree(s->tree = &e->t);
-    // NULL is only okay here because its an empty container
-    // (this is handled badly, there should be a better way)
-    r = ax__build_node(s, NULL, s->tree, &AX_DESC_EMPTY_CONTAINER, &root);
-    ASSERT(r == 0, "build empty tree");
+    /* int r; */
+    /* node_id root; */
+    /* r = ax__build_node(s, NULL, s->tree, &AX_DESC_EMPTY_CONTAINER, &root); */
+    /* ASSERT(r == 0, "build empty tree"); */
 
     ax__init_geom(s->geom = &e->g);
 

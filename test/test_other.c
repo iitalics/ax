@@ -40,7 +40,7 @@ TEST(die_two_init)
 TEST(die_font_bad_spec_error)
 {
     struct ax_state* s = ax_new_state();
-    CHECK_SZEQ(s->tree->count, (size_t) 1);
+    CHECK_SZEQ(s->tree->count, (size_t) 0);
     int r = ax_write(s,
                      "(init)"
                      "(set-root"
@@ -49,7 +49,7 @@ TEST(die_font_bad_spec_error)
                      "            (text \"hello\" (font \"bad\")))))");
     CHECK_IEQ(r, 1);
     CHECK_STREQ(ax_get_error(s), "invalid fake font");
-    CHECK_SZEQ(s->tree->count, (size_t) 1);
+    CHECK_SZEQ(s->tree->count, (size_t) 0); // tree wasn't set
     ax_destroy_state(s);
 }
 

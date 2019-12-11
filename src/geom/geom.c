@@ -354,6 +354,10 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
 
 void ax__layout(struct ax_tree* tr, struct ax_geom* g)
 {
+    if (ax__is_tree_empty(tr)) {
+        return;
+    }
+
     DEFINE_TRAVERSAL_LOCALS(tr, node);
 
     ax__root(tr)->avail = g->root_dim;

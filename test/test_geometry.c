@@ -8,8 +8,7 @@
 TEST(empty_root_node)
 {
     struct ax_state* s = ax_new_state();
-    CHECK_SZEQ(s->tree->count, (size_t) 1);
-    CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
+    CHECK_SZEQ(s->tree->count, (size_t) 0);
     ax_destroy_state(s);
 }
 

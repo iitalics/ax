@@ -99,6 +99,12 @@ int ax__build_node(struct ax_state* s,     // used for ax__set_error()
                    node_id* out_id);
 
 static inline
+bool ax__is_tree_empty(struct ax_tree* tree)
+{
+    return tree->count == 0;
+}
+
+static inline
 struct ax_node* ax__node_by_id(struct ax_tree* tree, node_id id)
 {
     return &tree->nodes[id];
