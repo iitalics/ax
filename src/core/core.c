@@ -154,11 +154,9 @@ void ax__set_dim(struct ax_state* s, struct ax_dim dim)
     invalidate(s);
 }
 
-void ax__set_tree(struct ax_state* s, struct ax_tree* tree)
+void ax__set_tree(struct ax_state* s, struct ax_tree* new_tree)
 {
-    ax__free_tree(s->tree);
-    memcpy(s->tree, tree, sizeof(struct ax_tree));
-    ax__init_tree(tree);
+    ax__tree_drain_from(s->tree, new_tree);
     invalidate(s);
 }
 

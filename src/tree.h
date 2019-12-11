@@ -99,6 +99,16 @@ int ax__build_node(struct ax_state* s,     // used for ax__set_error()
                    node_id* out_id);
 
 static inline
+void ax__tree_drain_from(struct ax_tree* tr,
+                         struct ax_tree* other)
+{
+    struct ax_tree tmp = *tr;
+    *tr = *other;
+    *other = tmp;
+    ax__tree_clear(other);
+}
+
+static inline
 bool ax__is_tree_empty(struct ax_tree* tree)
 {
     return tree->count == 0;

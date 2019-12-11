@@ -148,6 +148,7 @@ static void set_root(struct ax_state* s, struct ax_interp* it)
         goto cleanup2;
     }
     ax__set_tree(s, &tree);
+    ASSERT(ax__is_tree_empty(&tree), "tree should be empty now-");
 
 cleanup2:
     ax__free_tree(&tree);

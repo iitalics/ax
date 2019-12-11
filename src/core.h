@@ -36,7 +36,7 @@ bool ax__is_backend_initialized(struct ax_state* s)
 
 void ax__set_dim(struct ax_state* s, struct ax_dim dim);
 
-void ax__set_tree(struct ax_state* s, struct ax_tree* tree);
+void ax__set_tree(struct ax_state* s, struct ax_tree* new_tree);
 
 static inline
 void ax__config_win_size(struct ax_state* s, struct ax_dim d)
