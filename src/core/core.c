@@ -148,11 +148,11 @@ int ax_write(struct ax_state* s, const char* input)
 
 void ax__set_dim(struct ax_state* s, struct ax_dim dim)
 {
-    ax__sync_set_dim(s->async, dim);
+    ax__async_set_dim(s->async, dim);
 }
 
 void ax__set_tree(struct ax_state* s, struct ax_tree* new_tree)
 {
-    ax__sync_set_tree(s->async, new_tree);
+    ax__async_set_tree(s->async, new_tree);
     ASSERT(ax__is_tree_empty(new_tree), "tree should be empty after setting");
 }

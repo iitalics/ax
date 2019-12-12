@@ -1,9 +1,11 @@
 #include "helpers.h"
 #include "../src/ax.h"
 #include "../src/core.h"
+#include "../src/core/async.h"
 #include "../src/tree.h"
 
 #define N(_id)  ax__node_by_id(s->tree, _id)
+#define SYNC()  ax__async_wait_for_layout(s->async)
 
 TEST(empty_root_node)
 {
@@ -23,6 +25,7 @@ TEST(build_tree)
              "(init (window-size 200 200))"
              "(set-root"
              " (container (children " TWO_RECTS ")))");
+    SYNC();
     CHECK_SZEQ(s->tree->count, (size_t) 3);
     CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
     CHECK_IEQ(N(1)->ty, AX_NODE_RECTANGLE);
@@ -39,10 +42,11 @@ TEST(build_tree)
 #define JUSTIFY_TEST_2R(_mj, _xj, _x0, _y0, _x1, _y1) do {          \
         struct ax_state* s = ax_new_state();                        \
         ax_write(s,                                                 \
-                 "(init (window-size 200 200))"                                \
+                 "(init (window-size 200 200))"                     \
                  "(set-root (container (children " TWO_RECTS ")"    \
                  "                     (main-justify " _mj ")"      \
                  "                     (cross-justify " _xj ")))"); \
+        SYNC();                                                     \
         CHECK_POSEQ(N(1)->coord, AX_POS(_x0, _y0));                 \
         CHECK_POSEQ(N(2)->coord, AX_POS(_x1, _y1));                 \
         ax_destroy_state(s);                                        \
@@ -76,9 +80,11 @@ TEST(resize_2r)
              "(set-root"
              " (container (children " TWO_RECTS ")"
              "            (main-justify between)))");
+    SYNC();
     CHECK_POSEQ(N(1)->coord, AX_POS(0, 0));
     CHECK_POSEQ(N(2)->coord, AX_POS(140, 0));
     ax__set_dim(s, AX_DIM(300, 300));
+    SYNC();
     CHECK_POSEQ(N(1)->coord, AX_POS(0, 0));
     CHECK_POSEQ(N(2)->coord, AX_POS(240, 0));
 }
@@ -92,6 +98,7 @@ TEST(resize_2r)
              "(set-root"                                \
              " (text \"" _str "\""                      \
              "       (font \"size:" # _fsz "\")))");    \
+    SYNC();                                             \
     CHECK_SZEQ(s->tree->count, (size_t) 1);             \
     CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                  \
     CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw)); \
@@ -121,6 +128,7 @@ TEST(spill_3r)
             "            (rect (fill \"00ff00\") (size 80 80))"
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  multi-line))");
+    SYNC();
     CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 2);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 2);
@@ -141,6 +149,7 @@ TEST(shrink_3r)
             "            (rect (fill \"00ff00\") (size 80 80))"
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  single-line))");
+    SYNC();
     CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
@@ -164,6 +173,7 @@ TEST(shrink_3r_asym)
              "            (rect (fill \"00ff00\") (size 80 80))"
              "            (rect (fill \"0000ff\") (size 80 80)))"
              "  single-line))");
+    SYNC();
     CHECK_SZEQ(s->tree->count, (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
