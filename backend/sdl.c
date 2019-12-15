@@ -10,6 +10,8 @@
 struct ax_backend {
     SDL_Window* window;
     SDL_Renderer* render;
+
+    int prev_w, prev_h;
 };
 
 static void free_backend(struct ax_backend* b)
@@ -29,6 +31,8 @@ int ax__new_backend(struct ax_state* ax, struct ax_backend** out_bac)
     struct ax_backend b = {
         .window = NULL,
         .render = NULL,
+        .prev_w = -999,
+        .prev_h = -999,
     };
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -87,15 +91,15 @@ static SDL_Color ax_color_to_sdl(ax_color c)
     }
 }
 
-void ax__poll_events(struct ax_backend* bac, bool* out_close_evt)
+bool ax__poll_event(struct ax_backend* bac, struct ax_backend_evt* be)
 {
-    SDL_Event ev;
-    while (SDL_PollEvent(&ev)) {
-        switch (ev.type) {
+    SDL_Event se;
+    while (SDL_PollEvent(&se)) {
+        switch (se.type) {
         case SDL_QUIT:
             goto close;
         case SDL_KEYDOWN:
-            switch (ev.key.keysym.sym) {
+            switch (se.key.keysym.sym) {
             case SDLK_q:
                 goto close;
             default:
@@ -106,10 +110,20 @@ void ax__poll_events(struct ax_backend* bac, bool* out_close_evt)
             break;
         }
     }
-    return;
+
+    int w, h;
+    SDL_GetWindowSize(bac->window, &w, &h);
+    if (w != bac->prev_w || h != bac->prev_h) {
+        be->ty = AX_BEVT_RESIZE;
+        be->resize_dim.w = (bac->prev_w = w);
+        be->resize_dim.h = (bac->prev_h = h);
+        return true;
+    }
+
+    return false;
 close:
-    *out_close_evt = true;
-    return;
+    be->ty = AX_BEVT_CLOSE;
+    return true;
 }
 
 void ax__wait_for_frame(struct ax_backend* bac)

@@ -1,4 +1,5 @@
 #pragma once
+#include "ax.h"
 #include "base.h"
 
 struct ax_lexer;

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "async.h"
+#include "../ax.h"
 #include "../core.h"
 #include "../tree.h"
 #include "../tree/desc.h"
@@ -10,6 +10,7 @@
 #include "../geom.h"
 #include "../draw.h"
 #include "../backend.h"
+#include "async.h"
 
 struct ax_state* ax_new_state()
 {

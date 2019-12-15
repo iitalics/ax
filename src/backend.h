@@ -1,11 +1,29 @@
 #pragma once
-#include <stdbool.h>
-#include "ax.h"
+#include "base.h"
 
 struct ax_backend;
 struct ax_font;
+
+struct ax_state;
 struct ax_draw;
 struct ax_text_metrics;
+
+/*
+ * Backend events
+ */
+
+enum ax_backend_evt_type {
+    AX_BEVT_CLOSE = 0,
+    AX_BEVT_RESIZE,
+    AX_BEVT__MAX
+};
+
+struct ax_backend_evt {
+    enum ax_backend_evt_type ty;
+    union {
+        struct ax_dim resize_dim;
+    };
+};
 
 /*
  * Backend
@@ -14,7 +32,7 @@ struct ax_text_metrics;
 int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac);
 void ax__destroy_backend(struct ax_backend* bac);
 
-void ax__poll_events(struct ax_backend* bac, bool* out_close_evt);
+bool ax__poll_event(struct ax_backend* bac, struct ax_backend_evt* out_evt);
 
 void ax__wait_for_frame(struct ax_backend* bac);
 

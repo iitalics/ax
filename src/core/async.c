@@ -131,7 +131,6 @@ static void layout_thd_handle(struct ax_async* async, int msg,
 static void* layout_thd(void* ud)
 {
     struct ax_async* async = ud;
-
     for (bool quit = false; !quit; ) {
         bool needs_layout = false;
         bool notify_about_layout = false;
@@ -152,7 +151,6 @@ static void* layout_thd(void* ud)
             NOTIFY(async->layout.on_layout);
         }
     }
-
     return &async->layout;
 }
 
@@ -171,6 +169,31 @@ static void ui_thd_handle(struct ax_async* async, int msg,
     }
 }
 
+static void ui_thd_step(struct ax_async* async, struct ax_backend* bac,
+                        bool* out_closed)
+{
+    struct ax_backend_evt e;
+    while (ax__poll_event(bac, &e)) {
+        switch (e.ty) {
+
+        case AX_BEVT_CLOSE:
+            *out_closed = true;
+            break;
+
+        case AX_BEVT_RESIZE:
+            ax__async_set_dim(async, e.resize_dim);
+            break;
+
+        default: NO_SUCH_TAG("ax_backend_evt_type");
+        }
+    }
+
+    ax__render(bac,
+               async->ui.display_db.data,
+               async->ui.display_db.len);
+    ax__wait_for_frame(bac);
+}
+
 static void* ui_thd(void* ud)
 {
     struct ax_async* async = ud;
@@ -180,11 +203,7 @@ static void* ui_thd(void* ud)
     while (!quit) {
         bool backend_enabled = bac != NULL && !closed;
         if (backend_enabled) {
-            ax__poll_events(bac, &closed);
-            ax__render(bac,
-                       async->ui.display_db.data,
-                       async->ui.display_db.len);
-            ax__wait_for_frame(bac);
+            ui_thd_step(async, bac, &closed);
         }
 
         int msg;
@@ -195,7 +214,6 @@ static void* ui_thd(void* ud)
             NOTIFY(async->ui.on_close);
         }
     }
-
     return &async->ui;
 }
 
