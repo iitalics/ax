@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 
     if ((rv = ax_write(ax, "(init (window-size 400 300))")) != 0 ||
         (rv = build_example(ax, 10)) != 0 ||
-        (rv = ax_event_loop(ax)) != 0)
+        (rv = ax_wait_for_close(ax)) != 0)
     {
         fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
     }

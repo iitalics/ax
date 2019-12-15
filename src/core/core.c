@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "async.h"
 #include "../core.h"
@@ -80,13 +81,11 @@ void ax__set_error(struct ax_state* s, const char* err)
     strcpy(s->err_msg, err);
 }
 
-int ax_event_loop(struct ax_state* s)
+int ax_wait_for_close(struct ax_state* s)
 {
-    if (!ax__is_backend_initialized(s)) {
-        ax__set_error(s, "backend is not initialized");
-        return 1;
-    }
-    ax__event_loop(s->backend);
+    ASSERT(s->backend != NULL, "backend must be initialized!");
+    ax__async_wait_for_close(s->async);
+    printf("bye!\n");
     return 0;
 }
 

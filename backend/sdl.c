@@ -10,9 +10,6 @@
 struct ax_backend {
     SDL_Window* window;
     SDL_Renderer* render;
-
-    struct ax_draw* ds;
-    size_t ds_len;
 };
 
 static void free_backend(struct ax_backend* b)
@@ -32,8 +29,6 @@ int ax__new_backend(struct ax_state* ax, struct ax_backend** out_bac)
     struct ax_backend b = {
         .window = NULL,
         .render = NULL,
-        .ds = NULL,
-        .ds_len = 0,
     };
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -92,13 +87,45 @@ static SDL_Color ax_color_to_sdl(ax_color c)
     }
 }
 
-static void draw(struct ax_backend* bac)
+void ax__poll_events(struct ax_backend* bac, bool* out_close_evt)
+{
+    SDL_Event ev;
+    while (SDL_PollEvent(&ev)) {
+        switch (ev.type) {
+        case SDL_QUIT:
+            goto close;
+        case SDL_KEYDOWN:
+            switch (ev.key.keysym.sym) {
+            case SDLK_q:
+                goto close;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return;
+close:
+    *out_close_evt = true;
+    return;
+}
+
+void ax__wait_for_frame(struct ax_backend* bac)
+{
+    SDL_Delay(15);
+}
+
+void ax__render(struct ax_backend* bac,
+                struct ax_draw* ds,
+                size_t ds_len)
 {
     SDL_SetRenderDrawColor(bac->render, 0xff, 0xff, 0xff, 0xff);
     SDL_RenderClear(bac->render);
 
-    for (size_t i = 0; i < bac->ds_len; i++) {
-        struct ax_draw d = bac->ds[i];
+    for (size_t i = 0; i < ds_len; i++) {
+        struct ax_draw d = ds[i];
         switch (d.ty) {
 
         case AX_DRAW_RECT: {
@@ -146,47 +173,6 @@ ttf_err:
     ASSERT(0, "TTF: %s", TTF_GetError());
 sdl_err:
     ASSERT(0, "SDL: %s", SDL_GetError());
-}
-
-void ax__set_draws(struct ax_backend* bac,
-                   struct ax_draw* draws,
-                   size_t len)
-{
-    bac->ds = draws;
-    bac->ds_len = len;
-}
-
-void ax__event_loop(struct ax_backend* bac)
-{
-    for (;;) {
-        SDL_Event ev;
-        while (SDL_PollEvent(&ev)) {
-            switch (ev.type) {
-            case SDL_QUIT:
-                goto quit;
-            case SDL_KEYDOWN:
-                switch (ev.key.keysym.sym) {
-                case SDLK_q:
-                    goto quit;
-                default:
-                    break;
-                }
-                break;
-            default:
-                break;
-            }
-        }
-
-        /* int win_w, win_h; */
-        /* SDL_GetWindowSize(ax->backend->window, &win_w, &win_h); */
-        /* ax__set_dim(ax, AX_DIM(win_w, win_h)); */
-
-        draw(bac);
-        SDL_Delay(16);
-    }
-
-quit:
-    return;
 }
 
 int ax__new_font(struct ax_state* ax,

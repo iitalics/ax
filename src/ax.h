@@ -12,9 +12,10 @@ void ax_destroy_state(struct ax_state* s);
  * Basic operations
  */
 
-int ax_event_loop(struct ax_state* s);
-
 const char* ax_get_error(struct ax_state* s);
+
+// TODO: replace with eg. "wait_for_event" or "poll_event"
+int ax_wait_for_close(struct ax_state* s);
 
 /*
  * S-exp interface

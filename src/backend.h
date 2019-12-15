@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include "ax.h"
 
 struct ax_backend;
@@ -13,11 +14,13 @@ struct ax_text_metrics;
 int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac);
 void ax__destroy_backend(struct ax_backend* bac);
 
-void ax__set_draws(struct ax_backend* bac,
-                   struct ax_draw* draws,
-                   size_t len);
+void ax__poll_events(struct ax_backend* bac, bool* out_close_evt);
 
-void ax__event_loop(struct ax_backend* bac);
+void ax__wait_for_frame(struct ax_backend* bac);
+
+void ax__render(struct ax_backend* bac,
+                struct ax_draw* draws,
+                size_t len);
 
 /*
  * Fonts & text measurement

@@ -38,9 +38,21 @@ void ax__destroy_backend(struct ax_backend* bac)
     }
 }
 
-void ax__set_draws(struct ax_backend* bac,
-                   struct ax_draw* draws,
-                   size_t len)
+
+void ax__poll_events(struct ax_backend* bac, bool* out_close_evt)
+{
+    (void) bac;
+    (void) out_close_evt;
+}
+
+void ax__wait_for_frame(struct ax_backend* bac)
+{
+    (void) bac;
+}
+
+void ax__render(struct ax_backend* bac,
+                struct ax_draw* draws,
+                size_t len)
 {
     pthread_mutex_lock(&bac->sync_mx);
     bac->ds = draws;
@@ -67,12 +79,6 @@ void ax_test_backend_sync_until(struct ax_backend* bac, size_t desired_len)
         }
         pthread_mutex_unlock(&bac->sync_mx);
     }
-}
-
-void ax__event_loop(struct ax_backend* bac)
-{
-    (void) bac;
-    NOT_IMPL();
 }
 
 int ax__new_font(struct ax_state* s, struct ax_backend* bac,
