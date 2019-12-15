@@ -18,7 +18,6 @@ struct ax_state* ax_new_state()
         struct ax_interp i;
         struct ax_tree t;
         struct ax_geom g;
-        struct ax_draw_buf d;
         struct ax_async a;
     };
 
@@ -44,8 +43,6 @@ struct ax_state* ax_new_state()
 
     ax__init_geom(s->geom = &e->g);
 
-    ax__init_draw_buf(s->draw_buf = &e->d);
-
     ax__init_async(s, s->async = &e->a);
 
     return s;
@@ -55,7 +52,6 @@ void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
         ax__free_async(s->async);
-        ax__free_draw_buf(s->draw_buf);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
         ax__free_interp(s->interp);
@@ -71,7 +67,9 @@ void ax__initialize_backend(struct ax_state* s)
     ASSERT(s->backend == NULL, "backend already initialized");
     int r = ax__new_backend(s, &s->backend);
     ASSERT(r == 0, "create backend: %s", ax_get_error(s));
-    s->geom->root_dim = s->config.win_size;
+
+    ax__async_set_backend(s->async, s->backend);
+    ax__async_set_dim(s->async, s->config.win_size);
 }
 
 void ax__set_error(struct ax_state* s, const char* err)

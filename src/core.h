@@ -22,7 +22,6 @@ struct ax_state {
     struct ax_interp* interp;
     struct ax_tree* tree;
     struct ax_geom* geom;
-    struct ax_draw_buf* draw_buf;
     struct ax_async* async;
 };
 

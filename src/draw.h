@@ -42,4 +42,12 @@ struct ax_draw_buf {
 void ax__init_draw_buf(struct ax_draw_buf* db);
 void ax__free_draw_buf(struct ax_draw_buf* db);
 
+static inline
+void ax__swap_draw_bufs(struct ax_draw_buf* fst, struct ax_draw_buf* snd)
+{
+    struct ax_draw_buf tmp = *fst;
+    *fst = *snd;
+    *snd = tmp;
+}
+
 void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db);

@@ -7,6 +7,7 @@
 
 #define D(_idx) s->backend->ds[_idx]
 #define D_LEN() s->backend->ds_len
+#define SYNC(_n) ax_test_backend_sync_until(s->backend, _n)
 
 TEST(color_to_rgb)
 {
@@ -46,6 +47,7 @@ TEST(draw_1r)
              "(init (window-size 200 200))"
              "(set-root (rect (fill \"ff0033\") (size 60 80)))");
 
+    SYNC(1);
     CHECK_SZEQ(D_LEN(), (size_t) 1);
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ(D(0).r.fill, 0xff0033);
@@ -65,6 +67,7 @@ TEST(draw_3r)
              "                      (rect (fill \"0000ff\") (size 60 60)))"
              "            (main-justify between)"
              "            (cross-justify center)))");
+
     //
     //   +--------------+
     //   |              |
@@ -76,6 +79,7 @@ TEST(draw_3r)
     //
     //   (see `./reference_draw_3r.html`)
     //
+    SYNC(3);
     CHECK_SZEQ(D_LEN(), (size_t) 3);
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
     CHECK_IEQ_HEX(D(0).r.fill, 0xff0000);
@@ -92,6 +96,27 @@ TEST(draw_3r)
     ax_destroy_state(s);
 }
 
+TEST(draw_3r_threading_stress_test)
+{
+    for (size_t i = 0; i < 500; i++) {
+        struct ax_state* s = ax_new_state();
+        ax_write(s,
+                 "(init (window-size 200 200))"
+                 "(set-root"
+                 " (container (children (rect (size 60 60))"
+                 "                      (rect (size 20 20))"
+                 "                      (rect (size 60 60)))"
+                 "            (main-justify between)"
+                 "            (cross-justify center)))");
+        SYNC(3);
+        CHECK_SZEQ(D_LEN(), (size_t) 3);
+        CHECK_POSEQ(D(0).r.bounds.o, AX_POS(0.0, 70.0));
+        CHECK_POSEQ(D(1).r.bounds.o, AX_POS(90.0, 70.0));
+        CHECK_POSEQ(D(2).r.bounds.o, AX_POS(140.0, 70.0));
+        ax_destroy_state(s);
+    }
+}
+
 TEST(draw_3r_colors)
 {
     struct ax_state* s = ax_new_state();
@@ -102,6 +127,7 @@ TEST(draw_3r_colors)
              "                      (rect (fill none))"
              "                      (rect (fill (rgb 100 200 50))))))");
 
+    SYNC(3);
     CHECK_SZEQ(D_LEN(), (size_t) 3);
     CHECK_IEQ_HEX(D(0).r.fill, 0x123456);
     CHECK_TRUE(AX_COLOR_IS_NULL(D(1).r.fill));
@@ -118,6 +144,7 @@ TEST(draw_text_1l)
              "                (color \"111111\")"
              "                (font \"size:10\")))");
 
+    SYNC(1);
     CHECK_SZEQ(D_LEN(), (size_t) 1);
     CHECK_IEQ(D(0).ty, AX_DRAW_TEXT);
     CHECK_IEQ_HEX(D(0).t.color, 0x111111);
@@ -136,6 +163,7 @@ TEST(draw_text_2l)
              "                (color \"111111\")"
              "                (font \"size:10\")))");
 
+    SYNC(2);
     CHECK_SZEQ(D_LEN(), (size_t) 2);
     CHECK_IEQ(D(0).ty, AX_DRAW_TEXT);
     CHECK_IEQ_HEX(D(0).t.color, 0x111111);
@@ -160,6 +188,8 @@ TEST(draw_2r_bg)
             " (container (children (rect (fill \"ff0000\") (size 60 60))"
             "                      (rect (fill \"0000ff\") (size 60 60)))"
             "            (background \"00ff00\")))");
+
+    SYNC(3);
     CHECK_SZEQ(D_LEN(), (size_t) 3);
     // container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
@@ -191,6 +221,8 @@ TEST(draw_nested_bg)
              "                       (background \"ff00ff\"))"
              "                      (rect (fill \"0000ff\") (size 60 60)))"
              "            (background \"ffff00\")))");
+
+    SYNC(5);
     CHECK_SZEQ(D_LEN(), (size_t) 5);
     // outer container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);
@@ -232,6 +264,8 @@ TEST(draw_nested_2_bg)
              "                                 (rect (fill \"00ff00\") (size 60 20)))"
              "                       (background \"ff00ff\")))"
              "            (background \"ffff00\")))");
+
+    SYNC(5);
     CHECK_SZEQ(D_LEN(), (size_t) 5);
     // outer container
     CHECK_IEQ(D(0).ty, AX_DRAW_RECT);

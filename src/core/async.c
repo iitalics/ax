@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include "async.h"
+#include "../backend.h"
 #include "../core.h"
 #include "../tree.h"
 #include "../geom.h"
@@ -43,12 +44,23 @@
             _body;                                  \
         });
 
+#define JOIN(sys) do {                                          \
+        void* _ret;                                             \
+        ASSERT(pthread_join(sys.thd, &_ret) == 0,               \
+               "%s", strerror(errno));                          \
+        ASSERT(_ret == &sys, "thread didn't exit properly");    \
+    } while (0)
+
 static void* layout_thd(void*);
+static void* ui_thd(void*);
 
 void ax__init_async(struct ax_state* s, struct ax_async* async)
 {
     async->geom = s->geom;
     async->tree = s->tree;
+    ax__init_draw_buf(&async->layout.db);
+    ax__init_draw_buf(&async->ui.display_db);
+    ax__init_draw_buf(&async->ui.scratch_db);
 
     pthread_mutex_init(&async->layout.msg_mx, NULL);
     pthread_mutex_init(&async->layout.tree_mx, NULL);
@@ -58,17 +70,25 @@ void ax__init_async(struct ax_state* s, struct ax_async* async)
     pthread_cond_init(&async->layout.tree_modify, NULL);
     pthread_cond_init(&async->layout.wait_for, NULL);
 
+    pthread_mutex_init(&async->ui.msg_mx, NULL);
+    pthread_mutex_init(&async->ui.scratch_db_mx, NULL);
+    pthread_cond_init(&async->ui.new_msg_cv, NULL);
+
     pthread_create(&async->layout.thd, NULL, layout_thd, (void*) async);
+    pthread_create(&async->ui.thd, NULL, ui_thd, (void*) async);
 }
 
 void ax__free_async(struct ax_async* async)
 {
     SEND(async->layout, ASYNC_QUIT, {});
+    SEND(async->ui, ASYNC_QUIT, {});
 
-    void* ret;
-    int r = pthread_join(async->layout.thd, &ret);
-    ASSERT(r == 0, "%s", strerror(errno));
-    ASSERT(ret == &async->layout, "thread didn't exit properly");
+    JOIN(async->layout);
+    JOIN(async->ui);
+
+    pthread_cond_destroy(&async->ui.new_msg_cv);
+    pthread_mutex_destroy(&async->ui.scratch_db_mx);
+    pthread_mutex_destroy(&async->ui.msg_mx);
 
     pthread_cond_destroy(&async->layout.wait_for);
     pthread_cond_destroy(&async->layout.tree_modify);
@@ -77,6 +97,31 @@ void ax__free_async(struct ax_async* async)
     pthread_mutex_destroy(&async->layout.tree_modify_mx);
     pthread_mutex_destroy(&async->layout.tree_mx);
     pthread_mutex_destroy(&async->layout.msg_mx);
+
+    ax__free_draw_buf(&async->ui.scratch_db);
+    ax__free_draw_buf(&async->ui.display_db);
+    ax__free_draw_buf(&async->layout.db);
+}
+
+static void layout_thd_handle(struct ax_async* async, int msg,
+                              bool* out_quit, bool* out_needs_layout,
+                              bool* out_notify_about_layout)
+{
+    if (msg & ASYNC_QUIT) {
+        *out_quit = true;
+    }
+    if (msg & ASYNC_SET_DIM) {
+        *out_needs_layout = true;
+        async->geom->root_dim = async->layout.dim;
+    }
+    if (msg & ASYNC_SET_TREE) {
+        *out_needs_layout = true;
+        ax__tree_drain_from(async->tree, async->layout.tree);
+        NOTIFY(async->layout.tree_modify);
+    }
+    if (msg & ASYNC_WAIT_FOR_LAYOUT) {
+        *out_notify_about_layout = true;
+    }
 }
 
 static void* layout_thd(void* ud)
@@ -87,27 +132,16 @@ static void* layout_thd(void* ud)
         bool needs_layout = false;
         bool notify_about_layout = false;
         int msg;
-        RECV(async->layout, msg, {
-                if (msg & ASYNC_QUIT) {
-                    quit = true;
-                }
-                if (msg & ASYNC_SET_DIM) {
-                    needs_layout = true;
-                    async->geom->root_dim = async->layout.dim;
-                }
-                if (msg & ASYNC_SET_TREE) {
-                    needs_layout = true;
-                    ax__tree_drain_from(async->tree, async->layout.tree);
-                    NOTIFY(async->layout.tree_modify);
-                }
-                if (msg & ASYNC_WAIT_FOR_LAYOUT) {
-                    notify_about_layout = true;
-                }
-            });
+        RECV(async->layout, msg,
+             layout_thd_handle(async, msg, &quit, &needs_layout, &notify_about_layout));
 
         if (needs_layout) {
             ax__layout(async->tree, async->geom);
-            needs_layout = false;
+            ax__redraw(async->tree, &async->layout.db);
+            SEND(async->ui, ASYNC_FLIP_BUFFERS,
+                 LOCK(async->ui.scratch_db,
+                      ax__swap_draw_bufs(&async->layout.db,
+                                         &async->ui.scratch_db)));
         }
 
         if (notify_about_layout) {
@@ -116,6 +150,46 @@ static void* layout_thd(void* ud)
     }
 
     return &async->layout;
+}
+
+static void ui_thd_handle(struct ax_async* async, int msg,
+                          bool* out_quit, bool* out_update_draw,
+                          struct ax_backend** out_bac)
+{
+    if (msg & ASYNC_QUIT) {
+        *out_quit = true;
+    }
+    if (msg & ASYNC_SET_BACKEND) {
+        *out_bac = async->ui.backend;
+        *out_update_draw = true;
+    }
+    if (msg & ASYNC_FLIP_BUFFERS) {
+        LOCK(async->ui.scratch_db,
+             ax__swap_draw_bufs(&async->ui.display_db, &async->ui.scratch_db));
+        *out_update_draw = true;
+    }
+}
+
+static void* ui_thd(void* ud)
+{
+    struct ax_async* async = ud;
+    struct ax_backend* bac = NULL;
+    bool quit = false;
+    while (!quit) {
+        // TODO: read event from backend
+        bool draw = false;
+        int msg;
+        RECV(async->ui, msg,
+             ui_thd_handle(async, msg, &quit, &draw, &bac));
+
+        if (draw && bac != NULL) {
+            ax__set_draws(bac,
+                          async->ui.display_db.data,
+                          async->ui.display_db.len);
+        }
+    }
+
+    return &async->ui;
 }
 
 void ax__async_set_dim(struct ax_async* async, struct ax_dim dim)
@@ -140,4 +214,11 @@ void ax__async_wait_for_layout(struct ax_async* async)
               async->layout.wait_for,
               ASYNC_WAIT_FOR_LAYOUT,
               {});
+}
+
+void ax__async_set_backend(struct ax_async* async, struct ax_backend* bac)
+{
+    SEND(async->ui,
+         ASYNC_SET_BACKEND,
+         async->ui.backend = bac);
 }
