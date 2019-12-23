@@ -54,10 +54,12 @@
 static void* layout_thd(void*);
 static void* ui_thd(void*);
 
-void ax__init_async(struct ax_state* s, struct ax_async* async)
+void ax__init_async(struct ax_async* async,
+                    struct ax_geom* geom_subsys,
+                    struct ax_tree* tree_subsys)
 {
-    async->geom = s->geom;
-    async->tree = s->tree;
+    async->geom = geom_subsys;
+    async->tree = tree_subsys;
     ax__init_draw_buf(&async->layout.db);
     ax__init_draw_buf(&async->ui.display_db);
     ax__init_draw_buf(&async->ui.scratch_db);

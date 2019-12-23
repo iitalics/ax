@@ -58,7 +58,9 @@ struct ax_async {
     } ui;
 };
 
-void ax__init_async(struct ax_state* s, struct ax_async* async);
+void ax__init_async(struct ax_async* async,
+                    struct ax_geom* geom_subsys,
+                    struct ax_tree* tree_subsys);
 void ax__free_async(struct ax_async* async);
 
 void ax__async_set_dim(struct ax_async* async, struct ax_dim dim);

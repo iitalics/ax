@@ -45,7 +45,7 @@ struct ax_state* ax_new_state()
 
     ax__init_geom(s->geom = &e->g);
 
-    ax__init_async(s, s->async = &e->a);
+    ax__init_async(s->async = &e->a, s->geom, s->tree);
 
     return s;
 }
