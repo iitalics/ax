@@ -76,7 +76,10 @@ void ax__init_async(struct ax_state* s, struct ax_async* async)
     pthread_cond_init(&async->ui.new_msg_cv, NULL);
     pthread_cond_init(&async->ui.on_close, NULL);
 
+    async->layout.msg = 0;
     pthread_create(&async->layout.thd, NULL, layout_thd, (void*) async);
+
+    async->ui.msg = 0;
     pthread_create(&async->ui.thd, NULL, ui_thd, (void*) async);
 }
 
