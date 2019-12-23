@@ -16,7 +16,9 @@ test_srcs	= $(wildcard test/test_*.c)
 test_gen	= _build/run_tests.inc
 objs		= $(shell ${find_srcs} | ${sed_src2obj})
 
-libs		= _build/lib/libaxl.so _build/lib/libaxl_SDL.so
+libs		= _build/lib/libaxl.so \
+			_build/lib/libaxl_SDL.so \
+			_build/lib/libaxl_fortest.so
 test_exes	= ax_test ax_sdl_test
 
 find_srcs	= find src -type f -name '*.c'
@@ -43,9 +45,10 @@ sdl_t: ax_sdl_test
 
 # executables
 
-ax_test: ${test_gen} ${test_srcs} test/main.c _build/lib/libaxl.so
+ax_test: ${test_gen} ${test_srcs} test/main.c _build/lib/libaxl.so _build/lib/libaxl_fortest.so
 	@echo CC "test/main.c"
-	@${cc} -L_build/lib -laxl ${cc_flags} ${test_srcs} test/main.c -o $@
+	@${cc} -L_build/lib -laxl -laxl_fortest \
+		${cc_flags} ${test_srcs} test/main.c -o $@
 
 ax_sdl_test: test/ui_main.c _build/lib/libaxl.so _build/lib/libaxl_SDL.so
 	@echo CC "test/ui_main.c (sdl)"
@@ -83,18 +86,21 @@ TAGS: ${tags_srcs}
 
 # libraries
 
+ld_flags_SDL = $(shell pkg-config -libs -cflags sdl2 SDL2_ttf)
+
 _build/lib/libaxl.so: ld_flags = -pthread
 _build/lib/libaxl.so: ${gen} ${objs}
 	@mkdir -p $(dir $@)
 	@echo "LD $(notdir $@)"
 	@${ld} ${so_flags} ${ld_flags} -o $@ ${objs}
 
-_build/lib/libaxl_SDL.so: lib = $@
-_build/lib/libaxl_SDL.so: src = backend/sdl.c
-_build/lib/libaxl_SDL.so: dep = _build/backend__sdl.dep
-_build/lib/libaxl_SDL.so: ld_flags = $(shell pkg-config -libs -cflags sdl2 SDL2_ttf)
-_build/lib/libaxl_SDL.so: ${src}
-	@mkdir -p $(dir ${src})
-	@echo "LD $(notdir ${src})"
+_build/lib/libaxl_%.so: lib = $@
+_build/lib/libaxl_%.so: name = $(lib:_build/lib/libaxl_%.so=%)
+_build/lib/libaxl_%.so: src = backend/${name}.c
+_build/lib/libaxl_%.so: dep = _build/backend__${name}.dep
+_build/lib/libaxl_%.so: ld_flags = ${ld_flags_${name}}
+_build/lib/libaxl_%.so: ${src}
+	@mkdir -p $(dir ${lib})
+	@echo "LD $(notdir ${lib})"
 	@${cpp} -MM -MT $@ -MF ${dep} ${src}
 	@${ld} ${so_flags} ${ld_flags} -o $@ ${src}

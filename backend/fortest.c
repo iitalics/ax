@@ -1,11 +1,11 @@
 #include <sys/time.h>
 #include <errno.h>
-#include "helpers.h"
+#include "fortest.h"
+#include "../test/helpers.h"
 #include "../src/core.h"
 #include "../src/backend.h"
 #include "../src/utils.h"
 #include "../src/geom/text.h"
-#include "backend.h"
 
 struct ax_font {
     ax_length size;
