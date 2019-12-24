@@ -116,10 +116,10 @@ static int write_token(struct ax_state* s, enum ax_parse tok)
     return s->interp->err;
 }
 
-int ax_write_chunk(struct ax_state* s, const char* input)
+int ax_write_chunk(struct ax_state* s, const char* input, size_t len)
 {
     char* acc = (char*) input;
-    char const* end = input + strlen(input);
+    char const* end = input + len;
     while (acc < end) {
         int r = write_token(s, ax__lexer_feed(s->lexer, acc, &acc));
         if (r != 0) {
@@ -138,7 +138,7 @@ int ax_write(struct ax_state* s, const char* input)
 {
     ax_write_start(s);
     int r;
-    if ((r = ax_write_chunk(s, input)) != 0) {
+    if ((r = ax_write_chunk(s, input, strlen(input))) != 0) {
         return r;
     }
     return ax_write_end(s);
