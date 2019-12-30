@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "../ax.h"
 #include "../core.h"
@@ -34,6 +35,12 @@ struct ax_state* ax_new_state()
     };
     s->backend = NULL;
 
+    int evt_fds[2];
+    int rv = pipe(evt_fds);
+    ASSERT(rv == 0, "pipe creation failed: %s", strerror(errno));
+    s->evt_read_fd = evt_fds[0];
+    s->evt_write_fd = evt_fds[1];
+
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
 
@@ -45,7 +52,10 @@ struct ax_state* ax_new_state()
 
     ax__init_geom(s->geom = &e->g);
 
-    ax__init_async(s->async = &e->a, s->geom, s->tree);
+    ax__init_async(s->async = &e->a,
+                   s->geom,
+                   s->tree,
+                   s->evt_write_fd);
 
     return s;
 }
@@ -53,6 +63,12 @@ struct ax_state* ax_new_state()
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
+        // NOTE: closing evt_write_fd before shutting down the async threads makes it so
+        //       that any threads blocking on a write will unblock immediately. this is
+        //       much more desirable than trying to implement some other sort of locking
+        //       mechanism.
+        close(s->evt_write_fd);
+        close(s->evt_read_fd);
         ax__free_async(s->async);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
@@ -85,9 +101,24 @@ void ax__set_error(struct ax_state* s, const char* err)
 int ax_wait_for_close(struct ax_state* s)
 {
     ASSERT(s->backend != NULL, "backend must be initialized!");
-    ax__async_wait_for_close(s->async);
-    printf("bye!\n");
-    return 0;
+
+    for (;;) {
+        struct ax_backend_evt e;
+        if (!ax__async_pop_bevt(s->async, &e)) {
+            char buf[1];
+            read(s->evt_read_fd, buf, 1);
+            continue;
+        }
+
+        switch (e.ty) {
+        case AX_BEVT_CLOSE:
+            printf("bye!\n");
+            return 0;
+
+        default:
+            break;
+        }
+    }
 }
 
 const char* ax_get_error(struct ax_state* s)

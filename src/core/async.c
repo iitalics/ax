@@ -53,10 +53,12 @@
 
 static void* layout_thd(void*);
 static void* ui_thd(void*);
+static void* evt_thd(void*);
 
 void ax__init_async(struct ax_async* async,
                     struct ax_geom* geom_subsys,
-                    struct ax_tree* tree_subsys)
+                    struct ax_tree* tree_subsys,
+                    int evt_write_fd)
 {
     async->geom = geom_subsys;
     async->tree = tree_subsys;
@@ -78,20 +80,30 @@ void ax__init_async(struct ax_async* async,
     pthread_cond_init(&async->ui.new_msg_cv, NULL);
     pthread_cond_init(&async->ui.on_close, NULL);
 
+    pthread_mutex_init(&async->evt.msg_mx, NULL);
+    pthread_cond_init(&async->evt.new_msg_cv, NULL);
+
     async->layout.msg = 0;
     pthread_create(&async->layout.thd, NULL, layout_thd, (void*) async);
 
     async->ui.msg = 0;
     pthread_create(&async->ui.thd, NULL, ui_thd, (void*) async);
+
+    async->evt.msg = 0;
+    async->evt.write_fd = evt_write_fd;
+    async->evt.bevt_ty_mask = 0;
+    pthread_create(&async->evt.thd, NULL, evt_thd, (void*) async);
 }
 
 void ax__free_async(struct ax_async* async)
 {
     SEND(async->layout, ASYNC_QUIT, {});
     SEND(async->ui, ASYNC_QUIT, {});
+    SEND(async->evt, ASYNC_QUIT, {});
 
     JOIN(async->layout);
     JOIN(async->ui);
+    JOIN(async->evt);
 
     pthread_cond_destroy(&async->ui.on_close);
     pthread_cond_destroy(&async->ui.new_msg_cv);
@@ -106,6 +118,9 @@ void ax__free_async(struct ax_async* async)
     pthread_mutex_destroy(&async->layout.on_tree_modify_mx);
     pthread_mutex_destroy(&async->layout.tree_mx);
     pthread_mutex_destroy(&async->layout.msg_mx);
+
+    pthread_cond_destroy(&async->evt.new_msg_cv);
+    pthread_mutex_destroy(&async->evt.msg_mx);
 
     ax__free_draw_buf(&async->ui.scratch_db);
     ax__free_draw_buf(&async->ui.display_db);
@@ -191,6 +206,8 @@ static void ui_thd_step(struct ax_async* async, struct ax_backend* bac,
 
         default: NO_SUCH_TAG("ax_backend_evt_type");
         }
+
+        ax__async_push_bevt(async, e);
     }
 
     ax__render(bac,
@@ -214,12 +231,30 @@ static void* ui_thd(void* ud)
         int msg;
         RECV(async->ui, msg, !backend_enabled,
              ui_thd_handle(async, msg, &quit, &bac));
-
-        if (closed) {
-            NOTIFY(async->ui.on_close);
-        }
     }
     return &async->ui;
+}
+
+static void* evt_thd(void* ud)
+{
+    struct ax_async* async = ud;
+    bool quit = false;
+    while (!quit) {
+        int msg;
+        RECV(async->evt, msg, true, {
+                if (msg & ASYNC_QUIT) {
+                    quit = true;
+                }
+            });
+
+        if (async->evt.bevt_ty_mask != 0) {
+            int n = write(async->evt.write_fd, "!", 1);
+            if (n != 1) {
+                quit = true;
+            }
+        }
+    }
+    return &async->evt;
 }
 
 void ax__async_set_dim(struct ax_async* async, struct ax_dim dim)
@@ -253,10 +288,43 @@ void ax__async_wait_for_layout(struct ax_async* async)
               {});
 }
 
-void ax__async_wait_for_close(struct ax_async* async)
+#define BEVT_TY_MASK(_ty) (1 << (int) (_ty))
+
+void ax__async_push_bevt(struct ax_async* async, struct ax_backend_evt e)
 {
-    SEND_SYNC(async->ui,
-              async->ui.on_close,
-              ASYNC_WAIT_FOR_CLOSE,
-              {});
+    SEND(async->evt, ASYNC_PUSH_BEVT, {
+            async->evt.bevt_ty_mask |= BEVT_TY_MASK(e.ty);
+            switch (e.ty) {
+            case AX_BEVT_RESIZE:
+                async->evt.resize_dim = e.resize_dim;
+                break;
+            default: break;
+            }
+        });
+}
+
+bool ax__async_pop_bevt(struct ax_async* async, struct ax_backend_evt* out)
+{
+    struct ax_backend_evt e;
+    SEND(async->evt, ASYNC_POP_BEVT, {
+            for (e.ty = 0; e.ty < AX_BEVT__MAX; e.ty++) {
+                if (async->evt.bevt_ty_mask & BEVT_TY_MASK(e.ty)) {
+                    switch (e.ty) {
+                    case AX_BEVT_RESIZE:
+                        e.resize_dim = async->evt.resize_dim;
+                        break;
+                    default: break;
+                    }
+                    async->evt.bevt_ty_mask &= ~BEVT_TY_MASK(e.ty);
+                    break;
+                }
+            }
+        });
+
+    if (e.ty < AX_BEVT__MAX) {
+        *out = e;
+        return true;
+    } else {
+        return false;
+    }
 }

@@ -17,6 +17,8 @@ struct ax_backend_config {
 struct ax_state {
     char* err_msg;
     struct ax_backend_config config;
+    int evt_write_fd;
+    int evt_read_fd;
 
     struct ax_backend* backend;
     struct ax_lexer* lexer;
