@@ -182,7 +182,7 @@ static inline enum ax_parse sym1(struct ax_lexer* lex, char ch)
 
 static inline long digit(char c) { return c - '0'; }
 
-static enum ax_parse decimal_err(struct ax_lexer* lex, char ch)
+static enum ax_parse decimal(struct ax_lexer* lex, char ch)
 {
     ASSERT(ax__char_class(ch) & C_DECIMAL_MASK, "should be DEC");
     switch (lex->state) {
@@ -193,6 +193,7 @@ static enum ax_parse decimal_err(struct ax_lexer* lex, char ch)
 
     case S_DOUBLE_DECPT:
         lex->dec_pt_mag *= 10;
+        // fallthrough
     case S_INTEGER:
         lex->i = lex->i * 10 + digit(ch);
         return AX_PARSE_NOTHING;
@@ -206,7 +207,7 @@ static enum ax_parse decimal_err(struct ax_lexer* lex, char ch)
     }
 }
 
-static enum ax_parse quote_err(struct ax_lexer* lex)
+static enum ax_parse quote(struct ax_lexer* lex)
 {
     lex->state = S_QUOTE_STRING;
     lex->len = 0;
@@ -226,7 +227,7 @@ static enum ax_parse quoted_char(struct ax_lexer* lex, char ch)
     }
 }
 
-static enum ax_parse dot_err(struct ax_lexer* lex)
+static enum ax_parse dot(struct ax_lexer* lex)
 {
     switch (lex->state) {
     case S_INTEGER:
@@ -265,9 +266,9 @@ enum ax_parse ax__lexer_feed(struct ax_lexer* lex,
             case C_WHITESPACE: r = AX_PARSE_NOTHING; break;
             case C_LPAREN: r = lparen(lex); break;
             case C_RPAREN: r = rparen(lex); break;
-            case C_DECIMAL: r = decimal_err(lex, ch); break;
-            case C_QUOTE: r = quote_err(lex); break;
-            case C_DOT: r = dot_err(lex); break;
+            case C_DECIMAL: r = decimal(lex, ch); break;
+            case C_QUOTE: r = quote(lex); break;
+            case C_DOT: r = dot(lex); break;
             case C_HASH: NOT_IMPL();
             default:
                 if (cc & C_SYM0_MASK) {
