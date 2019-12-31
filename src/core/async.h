@@ -18,26 +18,25 @@ enum {
     ASYNC_POP_BEVT        = 1 << 8,
 };
 
-struct ax_async {
-    struct ax_geom* geom;
-    struct ax_tree* tree;
-
 #define MESSAGE_QUEUE_VARS()                    \
     int volatile msg;                           \
     pthread_mutex_t msg_mx;                     \
     pthread_cond_t new_msg_cv;
 
+struct ax_async {
     struct {
         pthread_t thd;
+        struct ax_geom* geom;
+        struct ax_tree* tree;
         struct ax_draw_buf db;
         MESSAGE_QUEUE_VARS();
 
         struct ax_dim volatile dim;
 
-        struct ax_tree* volatile tree;
-        pthread_mutex_t tree_mx;
-        pthread_cond_t on_tree_modify;
-        pthread_mutex_t on_tree_modify_mx;
+        struct ax_tree* volatile in_tree;
+        pthread_mutex_t in_tree_mx;
+        pthread_cond_t in_tree_drained;
+        pthread_mutex_t in_tree_drained_mx;
 
         pthread_cond_t on_layout;
         pthread_mutex_t on_layout_mx;
@@ -62,7 +61,7 @@ struct ax_async {
         int write_fd;
         MESSAGE_QUEUE_VARS();
 
-        int bevt_ty_mask;
+        int volatile bevt_ty_mask;
         struct ax_dim resize_dim;
     } evt;
 };
