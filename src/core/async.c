@@ -88,7 +88,7 @@ void ax__init_async(struct ax_async* async,
     // evt
     async->evt.write_fd = evt_write_fd;
     async->evt.msg = 0;
-    async->evt.bevt_ty_mask = 0;
+    async->evt.pending_close_evt = false;
     pthread_mutex_init(&async->evt.msg_mx, NULL);
     pthread_cond_init(&async->evt.new_msg_cv, NULL);
     pthread_create(&async->evt.thd, NULL, evt_thd, (void*) async);
@@ -196,6 +196,7 @@ static void ui_thd_step(struct ax_async* async, struct ax_backend* bac,
 
         case AX_BEVT_CLOSE:
             *out_closed = true;
+            ax__async_push_close_evt(async);
             break;
 
         case AX_BEVT_RESIZE:
@@ -204,8 +205,6 @@ static void ui_thd_step(struct ax_async* async, struct ax_backend* bac,
 
         default: NO_SUCH_TAG("ax_backend_evt_type");
         }
-
-        ax__async_push_bevt(async, e);
     }
 
     ax__render(bac,
@@ -238,18 +237,18 @@ static void* evt_thd(void* ud)
     struct ax_async* async = ud;
     bool quit = false;
     while (!quit) {
+        bool close_evt;
         int msg;
         RECV(async->evt, msg, true, {
                 if (msg & ASYNC_QUIT) {
                     quit = true;
                 }
+                close_evt = async->evt.pending_close_evt;
+                async->evt.pending_close_evt = false;
             });
 
-        if (async->evt.bevt_ty_mask != 0) {
-            int n = write(async->evt.write_fd, "!", 1);
-            if (n != 1) {
-                quit = true;
-            }
+        if (close_evt) {
+            write(async->evt.write_fd, "C", 1);
         }
     }
     return &async->evt;
@@ -286,43 +285,9 @@ void ax__async_wait_for_layout(struct ax_async* async)
               {});
 }
 
-#define BEVT_TY_MASK(_ty) (1 << (int) (_ty))
-
-void ax__async_push_bevt(struct ax_async* async, struct ax_backend_evt e)
+void ax__async_push_close_evt(struct ax_async* async)
 {
-    SEND(async->evt, ASYNC_PUSH_BEVT, {
-            async->evt.bevt_ty_mask |= BEVT_TY_MASK(e.ty);
-            switch (e.ty) {
-            case AX_BEVT_RESIZE:
-                async->evt.resize_dim = e.resize_dim;
-                break;
-            default: break;
-            }
-        });
-}
-
-bool ax__async_pop_bevt(struct ax_async* async, struct ax_backend_evt* out)
-{
-    struct ax_backend_evt e;
-    SEND(async->evt, ASYNC_POP_BEVT, {
-            for (e.ty = 0; e.ty < AX_BEVT__MAX; e.ty++) {
-                if (async->evt.bevt_ty_mask & BEVT_TY_MASK(e.ty)) {
-                    switch (e.ty) {
-                    case AX_BEVT_RESIZE:
-                        e.resize_dim = async->evt.resize_dim;
-                        break;
-                    default: break;
-                    }
-                    async->evt.bevt_ty_mask &= ~BEVT_TY_MASK(e.ty);
-                    break;
-                }
-            }
-        });
-
-    if (e.ty < AX_BEVT__MAX) {
-        *out = e;
-        return true;
-    } else {
-        return false;
-    }
+    SEND(async->evt,
+         ASYNC_WAKE_UP,
+         async->evt.pending_close_evt = true);
 }

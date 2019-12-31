@@ -1,5 +1,6 @@
 #pragma once
 #include <stdlib.h>
+#include <stdbool.h>
 
 /*
  * Setup and teardown
@@ -14,8 +15,14 @@ void ax_destroy_state(struct ax_state* s);
 
 const char* ax_get_error(struct ax_state* s);
 
-// TODO: replace with eg. "wait_for_event" or "poll_event"
-int ax_wait_for_close(struct ax_state* s);
+// the returned fd becomes "ready to read" when there are available events.  however, you
+// shouldn't read from it directly; rather use one of the 'read' functions below (which
+// will *not block* if you checked that there is data ready).
+int ax_event_poll_fd(struct ax_state* s);
+
+// currently 'close' is the only kind of event. in the future there needs to be a
+// mechanism to read one event, then dispatch on what kind it is.
+void ax_read_close_event(struct ax_state* s);
 
 /*
  * S-exp interface

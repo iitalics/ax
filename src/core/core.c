@@ -98,26 +98,19 @@ void ax__set_error(struct ax_state* s, const char* err)
     strcpy(s->err_msg, err);
 }
 
-int ax_wait_for_close(struct ax_state* s)
+int ax_event_poll_fd(struct ax_state* s)
+{
+    return s->evt_read_fd;
+}
+
+void ax_read_close_event(struct ax_state* s)
 {
     ASSERT(s->backend != NULL, "backend must be initialized!");
 
-    for (;;) {
-        struct ax_backend_evt e;
-        if (!ax__async_pop_bevt(s->async, &e)) {
-            char buf[1];
-            read(s->evt_read_fd, buf, 1);
-            continue;
-        }
-
-        switch (e.ty) {
-        case AX_BEVT_CLOSE:
-            printf("bye!\n");
-            return 0;
-
-        default:
-            break;
-        }
+    char buf[2] = {'\0', '\0'};
+    size_t n = read(ax_event_poll_fd(s), buf, 1);
+    if (n > 0) {
+        ASSERT(strcmp(buf, "C") == 0, "got \"%s\"", buf);
     }
 }
 

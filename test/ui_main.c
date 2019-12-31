@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "../src/ax.h"
+#include "../src/utils.h"
 
 /* ax_color ax__lerp_colors(ax_color c0, ax_color c1, int t, int tmax) */
 /* { */
@@ -48,17 +49,21 @@ static int build_example(struct ax_state* ax, size_t n)
 int main(int argc, char** argv)
 {
     (void) argc, (void) argv;
-    int rv;
 
     struct ax_state* ax = ax_new_state();
 
-    if ((rv = ax_write(ax, "(init (window-size 400 300))")) != 0 ||
-        (rv = build_example(ax, 10)) != 0 ||
-        (rv = ax_wait_for_close(ax)) != 0)
-    {
-        fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
-    }
+    int rv;
+    GUARD(ax_write(ax, "(init (window-size 400 300))"));
+    GUARD(build_example(ax, 10));
 
+    ax_read_close_event(ax);
+    printf("bye.\n");
+
+cleanup:
     ax_destroy_state(ax);
     return rv;
+
+err:
+    fprintf(stderr, "ERROR: %s\n", ax_get_error(ax));
+    goto cleanup;
 }
