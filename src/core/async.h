@@ -31,13 +31,11 @@ struct ax_async {
         pthread_t thd;
         struct ax_geom* geom;
         struct ax_tree* tree;
-        struct ax_draw_buf db;
+        struct ax_draw_buf draw_buf;
         MESSAGE_QUEUE_VARS();
 
-        struct ax_dim volatile dim;
-
+        struct ax_dim volatile in_dim;
         struct ax_tree* volatile in_tree;
-        pthread_mutex_t in_tree_mx;
         pthread_cond_t in_tree_drained;
         pthread_mutex_t in_tree_drained_mx;
 
@@ -47,13 +45,11 @@ struct ax_async {
 
     struct {
         pthread_t thd;
+        struct ax_draw_buf disp_draw_buf;
         MESSAGE_QUEUE_VARS();
 
-        struct ax_backend* backend;
-
-        struct ax_draw_buf display_db;
-        struct ax_draw_buf scratch_db;
-        pthread_mutex_t scratch_db_mx;
+        struct ax_backend* in_backend;
+        struct ax_draw_buf in_draw_buf;
 
         pthread_cond_t on_close;
         pthread_mutex_t on_close_mx;
