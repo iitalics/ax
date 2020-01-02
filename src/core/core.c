@@ -64,10 +64,9 @@ struct ax_state* ax_new_state()
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
-        // NOTE: closing evt_write_fd before shutting down the async threads makes it so
-        //       that any threads blocking on a write will unblock immediately. this is
-        //       much more desirable than trying to implement some other sort of locking
-        //       mechanism.
+        // NOTE: closing evt_write_fd before shutting down the async subsystem is an easy
+        //       way to unblock the "evt thread" in case it's blocked for some reason.
+        //       however i think this causes it to spit out a "broken pipe" error.
         close(s->evt_write_fd);
         close(s->evt_read_fd);
         ax__free_async(s->async);
