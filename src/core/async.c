@@ -181,15 +181,13 @@ static void ui_thd_handle(struct ax_async* async, int msg,
     }
 }
 
-static void ui_thd_step(struct ax_async* async, struct ax_backend* bac,
-                        bool* out_closed)
+static void ui_thd_step(struct ax_async* async, struct ax_backend* bac)
 {
     struct ax_backend_evt e;
     while (ax__poll_event(bac, &e)) {
         switch (e.ty) {
 
         case AX_BEVT_CLOSE:
-            *out_closed = true;
             ax__async_push_close_evt(async);
             break;
 
@@ -212,15 +210,13 @@ static void* ui_thd(void* ud)
     struct ax_async* async = ud;
     struct ax_backend* bac = NULL;
     bool quit = false;
-    bool closed = false;
     while (!quit) {
-        bool backend_enabled = bac != NULL && !closed;
-        if (backend_enabled) {
-            ui_thd_step(async, bac, &closed);
+        if (bac != NULL) {
+            ui_thd_step(async, bac);
         }
 
         int msg;
-        RECV(async->ui, msg, !backend_enabled,
+        RECV(async->ui, msg, bac == NULL,
              ui_thd_handle(async, msg, &quit, &bac));
     }
     return &async->ui;

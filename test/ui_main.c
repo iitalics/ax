@@ -57,6 +57,8 @@ int main(int argc, char** argv)
     GUARD(build_example(ax, 10));
 
     ax_read_close_event(ax);
+    printf("nice try.\n");
+    ax_read_close_event(ax);
     printf("bye.\n");
 
 cleanup:
