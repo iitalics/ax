@@ -15,13 +15,16 @@ void ax_destroy_state(struct ax_state* s);
 
 const char* ax_get_error(struct ax_state* s);
 
-// the returned fd becomes "ready to read" when there are available events.  however, you
-// shouldn't read from it directly; rather use one of the 'read' functions below (which
-// will *not block* if you checked that there is data ready).
-int ax_event_poll_fd(struct ax_state* s);
+// the returned fd becomes "ready to read" when there are available events. however, you
+// shouldn't read from it directly; rather use one of the 'read' functions below.
+int ax_poll_event_fd(struct ax_state* s);
 
-// currently 'close' is the only kind of event. in the future there needs to be a
-// mechanism to read one event, then dispatch on what kind it is.
+// returns 'true' if one of the 'read' functions below would not block.
+bool ax_poll_event(struct ax_state* s);
+
+// blocks until the window is closed. currently 'close' is the only kind of event. in the
+// future there needs to be a mechanism to read one event, then dispatch on what kind it
+// is.
 void ax_read_close_event(struct ax_state* s);
 
 /*

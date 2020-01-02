@@ -1,7 +1,8 @@
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/select.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "../ax.h"
 #include "../core.h"
@@ -98,9 +99,20 @@ void ax__set_error(struct ax_state* s, const char* err)
     strcpy(s->err_msg, err);
 }
 
-int ax_event_poll_fd(struct ax_state* s)
+int ax_poll_event_fd(struct ax_state* s)
 {
     return s->evt_read_fd;
+}
+
+bool ax_poll_event(struct ax_state* s)
+{
+    int fd = ax_poll_event_fd(s);
+    fd_set rd_fds;
+    FD_ZERO(&rd_fds);
+    FD_SET(fd, &rd_fds);
+    struct timeval tmout;
+    tmout.tv_sec = tmout.tv_usec = 0;
+    return select(fd + 1, &rd_fds, NULL, NULL, &tmout) > 0;
 }
 
 void ax_read_close_event(struct ax_state* s)
@@ -108,7 +120,7 @@ void ax_read_close_event(struct ax_state* s)
     ASSERT(s->backend != NULL, "backend must be initialized!");
 
     char buf[2] = {'\0', '\0'};
-    size_t n = read(ax_event_poll_fd(s), buf, 1);
+    size_t n = read(ax_poll_event_fd(s), buf, 1);
     if (n > 0) {
         ASSERT(strcmp(buf, "C") == 0, "got \"%s\"", buf);
     }
