@@ -1,5 +1,7 @@
 #lang racket/base
 (provide
+ justify?
+
  ; (color->rgb c) -> (list byte byte byte)
  ; c : (or "red" "green" "blue")
  color->rgb
@@ -19,6 +21,9 @@
   (require
    rackunit
    racket/port))
+
+(define (justify? x)
+  (memq x '(start end center evenly around between)))
 
 (define (color->rgb c)
   (case c
