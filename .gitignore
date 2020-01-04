@@ -3,3 +3,4 @@ _build
 .dir-locals.el
 TAGS
 *_scrot.png
+**/compiled/
