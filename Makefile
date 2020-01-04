@@ -8,8 +8,10 @@ cc_flags	= -std=c99 -g -pthread -fPIC \
 			-Wall -Wshadow -Wpointer-arith  -Wstrict-prototypes \
 			-Wmissing-prototypes -Wfloat-equal \
 			-Werror=implicit-function-declaration
+cc_flags	+= -DAX_TEST_NO_STRESS_TESTS
 so_flags	= -shared \
 			-Wl,-flat_namespace,-undefined,dynamic_lookup
+
 
 srcs		= $(shell ${find_srcs})
 gen		= _build/parser_rules.inc

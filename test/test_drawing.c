@@ -98,7 +98,8 @@ TEST(draw_3r)
 
 TEST(draw_3r_threading_stress_test)
 {
-    for (size_t i = 0; i < 500; i++) {
+#ifndef AX_TEST_NO_STRESS_TESTS
+    for (size_t i = 0; i < 100; i++) {
         struct ax_state* s = ax_new_state();
         ax_write(s,
                  "(init (window-size 200 200))"
@@ -115,6 +116,7 @@ TEST(draw_3r_threading_stress_test)
         CHECK_POSEQ(D(2).r.bounds.o, AX_POS(140.0, 70.0));
         ax_destroy_state(s);
     }
+#endif
 }
 
 TEST(draw_3r_colors)

@@ -1,5 +1,7 @@
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/select.h>
 #include <unistd.h>
 
 #include "../ax.h"
@@ -34,6 +36,12 @@ struct ax_state* ax_new_state()
     };
     s->backend = NULL;
 
+    int evt_fds[2];
+    int rv = pipe(evt_fds);
+    ASSERT(rv == 0, "pipe creation failed: %s", strerror(errno));
+    s->evt_read_fd = evt_fds[0];
+    s->evt_write_fd = evt_fds[1];
+
     ax__init_lexer(s->lexer = &e->l);
     ax__init_interp(s->interp = &e->i);
 
@@ -45,7 +53,10 @@ struct ax_state* ax_new_state()
 
     ax__init_geom(s->geom = &e->g);
 
-    ax__init_async(s->async = &e->a, s->geom, s->tree);
+    ax__init_async(s->async = &e->a,
+                   s->geom,
+                   s->tree,
+                   s->evt_write_fd);
 
     return s;
 }
@@ -53,6 +64,11 @@ struct ax_state* ax_new_state()
 void ax_destroy_state(struct ax_state* s)
 {
     if (s != NULL) {
+        // NOTE: closing evt_write_fd before shutting down the async subsystem is an easy
+        //       way to unblock the "evt thread" in case it's blocked for some reason.
+        //       however i think this causes it to spit out a "broken pipe" error.
+        close(s->evt_write_fd);
+        close(s->evt_read_fd);
         ax__free_async(s->async);
         ax__free_geom(s->geom);
         ax__free_tree(s->tree);
@@ -82,12 +98,31 @@ void ax__set_error(struct ax_state* s, const char* err)
     strcpy(s->err_msg, err);
 }
 
-int ax_wait_for_close(struct ax_state* s)
+int ax_poll_event_fd(struct ax_state* s)
+{
+    return s->evt_read_fd;
+}
+
+bool ax_poll_event(struct ax_state* s)
+{
+    int fd = ax_poll_event_fd(s);
+    fd_set rd_fds;
+    FD_ZERO(&rd_fds);
+    FD_SET(fd, &rd_fds);
+    struct timeval tmout;
+    tmout.tv_sec = tmout.tv_usec = 0;
+    return select(fd + 1, &rd_fds, NULL, NULL, &tmout) > 0;
+}
+
+void ax_read_close_event(struct ax_state* s)
 {
     ASSERT(s->backend != NULL, "backend must be initialized!");
-    ax__async_wait_for_close(s->async);
-    printf("bye!\n");
-    return 0;
+
+    char buf[2] = {'\0', '\0'};
+    size_t n = read(ax_poll_event_fd(s), buf, 1);
+    if (n > 0) {
+        ASSERT(strcmp(buf, "C") == 0, "got \"%s\"", buf);
+    }
 }
 
 const char* ax_get_error(struct ax_state* s)

@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include <errno.h>
+#include <unistd.h>
 #include "fortest.h"
 #include "../test/helpers.h"
 #include "../src/core.h"
@@ -19,6 +20,8 @@ int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
         .ds = NULL,
         .ds_len = 0,
     };
+    pthread_mutex_init(&b.sig_mx, NULL);
+    b.sig.close = false;
     pthread_cond_init(&b.sync, NULL);
     pthread_mutex_init(&b.sync_mx, NULL);
 
@@ -34,6 +37,7 @@ void ax__destroy_backend(struct ax_backend* bac)
     if (bac != NULL) {
         pthread_mutex_destroy(&bac->sync_mx);
         pthread_cond_destroy(&bac->sync);
+        pthread_mutex_destroy(&bac->sig_mx);
         free(bac);
     }
 }
@@ -41,14 +45,35 @@ void ax__destroy_backend(struct ax_backend* bac)
 
 bool ax__poll_event(struct ax_backend* bac, struct ax_backend_evt* out_evt)
 {
-    (void) bac;
-    (void) out_evt;
-    return false;
+    pthread_mutex_lock(&bac->sig_mx);
+
+    struct ax_backend_evt e = { .ty = AX_BEVT__MAX };
+    if (bac->sig.close) {
+        e.ty = AX_BEVT_CLOSE;
+    }
+
+    bac->sig.close = false;
+    pthread_mutex_unlock(&bac->sig_mx);
+
+    if (e.ty < AX_BEVT__MAX) {
+        *out_evt = e;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void ax__wait_for_frame(struct ax_backend* bac)
 {
     (void) bac;
+    usleep(5000);
+}
+
+void ax_test_backend_sig_close(struct ax_backend* bac)
+{
+    pthread_mutex_lock(&bac->sig_mx);
+    bac->sig.close = true;
+    pthread_mutex_unlock(&bac->sig_mx);
 }
 
 void ax__render(struct ax_backend* bac,

@@ -15,3 +15,5 @@
 
 #define NOT_IMPL() ASSERT(0, "not implemented")
 #define NO_SUCH_TAG(ty) ASSERT(0, "no such " ty " tag")
+
+#define GUARD(e) if ((rv = e) != 0) { goto err; }
