@@ -66,6 +66,7 @@ void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db)
     }
 
     DEFINE_TRAVERSAL_LOCALS(tr, node);
+    ax__growable_clear(&db->growable);
     FOR_EACH_FROM_TOP(node) {
         redraw_(node, db);
     }
