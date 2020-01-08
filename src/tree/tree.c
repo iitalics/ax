@@ -9,14 +9,13 @@
 void ax__init_tree(struct ax_tree* tr)
 {
     ax__init_region(&tr->rgn);
-    tr->count = 0;
-    tr->nodes = ALLOCATES(&tr->rgn, struct ax_node, tr->capacity = 30);
-    // TODO: growable tree
+    ax__init_growable(&tr->nodes, DEFAULT_CAPACITY);
 }
 
 void ax__free_tree(struct ax_tree* tr)
 {
     ax__tree_clear(tr);
+    ax__free_growable(&tr->nodes);
     ax__free_region(&tr->rgn);
 }
 
@@ -26,7 +25,7 @@ void ax__tree_clear(struct ax_tree* tr)
     FOR_EACH_FROM_BOTTOM(node) {
         ax__free_node(node);
     }
-    tr->count = 0;
+    ax__growable_clear(&tr->nodes);
     ax__region_clear(&tr->rgn);
 }
 

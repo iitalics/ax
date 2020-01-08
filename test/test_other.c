@@ -40,7 +40,7 @@ TEST(die_two_init)
 TEST(die_font_bad_spec_error)
 {
     struct ax_state* s = ax_new_state();
-    CHECK_SZEQ(s->tree->count, (size_t) 0);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 0);
     int r = ax_write(s,
                      "(init)"
                      "(set-root"
@@ -49,7 +49,7 @@ TEST(die_font_bad_spec_error)
                      "            (text \"hello\" (font \"bad\")))))");
     CHECK_IEQ(r, 1);
     CHECK_STREQ(ax_get_error(s), "invalid fake font");
-    CHECK_SZEQ(s->tree->count, (size_t) 0); // tree wasn't set
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 0); // tree wasn't set
     ax_destroy_state(s);
 }
 
@@ -61,7 +61,7 @@ TEST(die_recover)
     CHECK_STREQ(ax_get_error(s), "backend already initialized");
     r = ax_write(s, "(set-root (container (children (rect) (rect))))");
     CHECK_IEQ(r, 0);
-    CHECK_SZEQ(s->tree->count, (size_t) 3);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 3);
     ax_destroy_state(s);
 }
 
@@ -83,5 +83,22 @@ TEST(die_syntax_error_fails_early)
     // TODO: meaningful error message
     CHECK_STREQ(ax_get_error(s), "syntax error: expected ???");
     CHECK_FALSE(ax__is_backend_initialized(s));
+    ax_destroy_state(s);
+}
+
+TEST(build_big_tree)
+{
+    struct ax_state* s = ax_new_state();
+    ax_write_start(s);
+#define W(x) ax_write_chunk(s, x, strlen(x))
+    W("(init (window-size 200 200))");
+    W("(set-root (container (children");
+    for (int i = 0; i < 1000; i++) {
+        W("(rect (size 20 20))");
+    }
+    W(")))");
+#undef W
+    CHECK_IEQ(ax_write_end(s), 0);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 1001);
     ax_destroy_state(s);
 }

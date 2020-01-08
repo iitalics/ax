@@ -10,7 +10,7 @@
 TEST(empty_root_node)
 {
     struct ax_state* s = ax_new_state();
-    CHECK_SZEQ(s->tree->count, (size_t) 0);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 0);
     ax_destroy_state(s);
 }
 
@@ -26,7 +26,7 @@ TEST(build_tree)
              "(set-root"
              " (container (children " TWO_RECTS ")))");
     SYNC();
-    CHECK_SZEQ(s->tree->count, (size_t) 3);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 3);
     CHECK_IEQ(N(0)->ty, AX_NODE_CONTAINER);
     CHECK_IEQ(N(1)->ty, AX_NODE_RECTANGLE);
     CHECK_IEQ(N(2)->ty, AX_NODE_RECTANGLE);
@@ -99,7 +99,7 @@ TEST(resize_2r)
              " (text \"" _str "\""                      \
              "       (font \"size:" # _fsz "\")))");    \
     SYNC();                                             \
-    CHECK_SZEQ(s->tree->count, (size_t) 1);             \
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 1);             \
     CHECK_IEQ(N(0)->ty, AX_NODE_TEXT);                  \
     CHECK_FLEQ(0.001, N(0)->hypoth.w, (float) (_expw)); \
     CHECK_FLEQ(0.001, N(0)->hypoth.h, (float) (_exph)); \
@@ -129,7 +129,7 @@ TEST(spill_3r)
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  multi-line))");
     SYNC();
-    CHECK_SZEQ(s->tree->count, (size_t) 4);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 2);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 2);
     CHECK_SZEQ(N(0)->c.line_count[1], (size_t) 1);
@@ -150,7 +150,7 @@ TEST(shrink_3r)
             "            (rect (fill \"0000ff\") (size 80 80)))"
             "  single-line))");
     SYNC();
-    CHECK_SZEQ(s->tree->count, (size_t) 4);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
     CHECK_POSEQ(N(1)->coord, AX_POS(0.0, 0.0));
@@ -174,7 +174,7 @@ TEST(shrink_3r_asym)
              "            (rect (fill \"0000ff\") (size 80 80)))"
              "  single-line))");
     SYNC();
-    CHECK_SZEQ(s->tree->count, (size_t) 4);
+    CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 4);
     CHECK_SZEQ(N(0)->c.n_lines, (size_t) 1);
     CHECK_SZEQ(N(0)->c.line_count[0], (size_t) 3);
     CHECK_POSEQ(N(1)->coord, AX_POS(0.0, 0.0));

@@ -200,8 +200,8 @@ static void ui_thd_step(struct ax_async* async, struct ax_backend* bac)
     }
 
     ax__render(bac,
-               async->ui.disp_draw_buf.data,
-               async->ui.disp_draw_buf.len);
+               ax__draw_buf_data(&async->ui.disp_draw_buf),
+               ax__draw_buf_count(&async->ui.disp_draw_buf));
     ax__wait_for_frame(bac);
 }
 

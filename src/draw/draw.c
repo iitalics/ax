@@ -6,31 +6,17 @@
 
 void ax__init_draw_buf(struct ax_draw_buf* db)
 {
-    ax__init_region(&db->cur_rgn);
-    ax__init_region(&db->swap_rgn);
-
-    db->data = ALLOCATES(&db->cur_rgn, struct ax_draw, db->cap = 4);
-    db->len = 0;
+    ax__init_growable(&db->growable, DEFAULT_CAPACITY);
 }
 
 void ax__free_draw_buf(struct ax_draw_buf* db)
 {
-    ax__free_region(&db->swap_rgn);
-    ax__free_region(&db->cur_rgn);
+    ax__free_growable(&db->growable);
 }
 
 static struct ax_draw* draw_buf_ins(struct ax_draw_buf* db)
 {
-    if (db->len >= db->cap) {
-        size_t new_cap = db->cap * 2;
-        struct ax_draw* new_data = ALLOCATES(&db->swap_rgn, struct ax_draw, new_cap);
-        memcpy(new_data, db->data, sizeof(struct ax_draw) * db->cap);
-        db->data = new_data;
-        db->cap = new_cap;
-        ax__swap_regions(&db->cur_rgn, &db->swap_rgn);
-        ax__region_clear(&db->swap_rgn);
-    }
-    return &db->data[db->len++];
+    return ax__growable_extend(&db->growable, sizeof(struct ax_draw));
 }
 
 static void redraw_(struct ax_node* node, struct ax_draw_buf* db)
@@ -80,7 +66,6 @@ void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db)
     }
 
     DEFINE_TRAVERSAL_LOCALS(tr, node);
-    db->len = 0;
     FOR_EACH_FROM_TOP(node) {
         redraw_(node, db);
     }

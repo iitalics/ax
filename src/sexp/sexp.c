@@ -16,37 +16,25 @@ enum state {
 
 void ax__init_lexer(struct ax_lexer* lex)
 {
-    ax__init_region(&lex->cur_rgn);
-    ax__init_region(&lex->swap_rgn);
     lex->state = S_NOTHING;
     lex->paren_depth = 0;
-    lex->len = 0;
-    lex->str = ALLOCATES(&lex->cur_rgn, char, lex->cap = 32);
+    ax__init_growable(&lex->str_buf, 16);
+    ax__growable_clear_str(&lex->str_buf);
 }
 
 void ax__free_lexer(struct ax_lexer* lex)
 {
-    ax__free_region(&lex->swap_rgn);
-    ax__free_region(&lex->cur_rgn);
+    ax__free_growable(&lex->str_buf);
 }
 
 static void push_char(struct ax_lexer* lex, char ch)
 {
-    if (lex->len + 1 >= lex->cap) {
-        size_t new_cap = lex->cap * 2;
-        char* new_str = ALLOCATES(&lex->swap_rgn, char, new_cap);
-        memcpy(new_str, lex->str, lex->len);
-        lex->str = new_str;
-        lex->cap = new_cap;
-        ax__swap_regions(&lex->cur_rgn, &lex->swap_rgn);
-        ax__region_clear(&lex->swap_rgn);
-    }
-    lex->str[lex->len++] = ch;
+    ax__growable_push_char(&lex->str_buf, ch);
 }
 
 static void nul_term(struct ax_lexer* lex)
 {
-    lex->str[lex->len] = '\0';
+    lex->str = lex->str_buf.data;
 }
 
 
@@ -77,32 +65,38 @@ enum char_class ax__char_class(char c)
 
 static enum ax_parse bad_char_err(struct ax_lexer* lex, char c)
 {
-    lex->len = sprintf(lex->str, "invalid character `%c'", c);
     lex->err = AX_PARSE_ERROR_BAD_CHAR;
+    {
+        char buf[40];
+        sprintf(buf, "invalid character `%c'", c);
+        ax__growable_clear_str(&lex->str_buf);
+        ax__growable_push_str(&lex->str_buf, buf);
+        lex->str = lex->str_buf.data;
+    }
     lex->state = S_NOTHING;
     return AX_PARSE_ERROR;
 }
 
 static enum ax_parse extra_rparen_err(struct ax_lexer* lex)
 {
-    lex->len = sprintf(lex->str, "unexpected `)'");
     lex->err = AX_PARSE_ERROR_EXTRA_RPAREN;
+    lex->str = "unexpected `)'";
     lex->state = S_NOTHING;
     return AX_PARSE_ERROR;
 }
 
 static enum ax_parse unmatch_lparen_err(struct ax_lexer* lex)
 {
-    lex->len = sprintf(lex->str, "unmatched `('");
     lex->err = AX_PARSE_ERROR_UNMATCH_LPAREN;
+    lex->str = "unmatched `('";
     lex->state = S_NOTHING;
     return AX_PARSE_ERROR;
 }
 
 static enum ax_parse unmatch_quote_err(struct ax_lexer* lex)
 {
-    lex->len = sprintf(lex->str, "unmatched \"");
     lex->err = AX_PARSE_ERROR_UNMATCH_QUOTE;
+    lex->str = "unmatched \"";
     lex->state = S_NOTHING;
     return AX_PARSE_ERROR;
 }
@@ -168,7 +162,7 @@ static inline enum ax_parse sym1(struct ax_lexer* lex, char ch)
     switch (lex->state) {
     case S_NOTHING:
         lex->state = S_SYMBOL;
-        lex->len = 0;
+        ax__growable_clear_str(&lex->str_buf);
         push_char(lex, ch);
         return AX_PARSE_NOTHING;
 
@@ -214,7 +208,7 @@ static enum ax_parse decimal(struct ax_lexer* lex, char ch)
 static enum ax_parse quote(struct ax_lexer* lex)
 {
     lex->state = S_QUOTE_STRING;
-    lex->len = 0;
+    ax__growable_clear_str(&lex->str_buf);
     return AX_PARSE_NOTHING;
 }
 

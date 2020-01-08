@@ -2,6 +2,7 @@
 #include "base.h"
 #include "utils.h"
 #include "core/region.h"
+#include "core/growable.h"
 
 struct ax_state;
 struct ax_backend;
@@ -79,8 +80,7 @@ struct ax_node {
 
 struct ax_tree {
     struct region rgn;
-    size_t count, capacity;
-    struct ax_node* nodes;
+    struct growable nodes;
 };
 
 #define NULL_ID             SIZE_MAX
@@ -112,13 +112,20 @@ void ax__tree_drain_from(struct ax_tree* tr,
 static inline
 bool ax__is_tree_empty(struct ax_tree* tree)
 {
-    return tree->count == 0;
+    return ax__is_growable_empty(&tree->nodes);
+}
+
+static inline
+size_t ax__tree_count(struct ax_tree* tree)
+{
+    return LEN(&tree->nodes, struct ax_node);
 }
 
 static inline
 struct ax_node* ax__node_by_id(struct ax_tree* tree, node_id id)
 {
-    return &tree->nodes[id];
+    struct ax_node* nodes = tree->nodes.data;
+    return &nodes[id];
 }
 
 static inline
@@ -130,8 +137,9 @@ struct ax_node* ax__root(struct ax_tree* tree)
 static inline
 node_id ax__new_id(struct ax_tree* tree)
 {
-    ASSERT(tree->count < tree->capacity, "too many nodes!");
-    return tree->count++;
+    size_t id = ax__tree_count(tree);
+    (void) ax__growable_extend(&tree->nodes, sizeof(struct ax_node));
+    return id;
 }
 
 #ifdef AX_DEFINE_TRAVERSAL_MACROS
@@ -143,12 +151,12 @@ node_id ax__new_id(struct ax_tree* tree)
 
 #define FOR_EACH_FROM_TOP(_n)                               \
     for (_trav_id = 0;                                      \
-         _trav_id < (_trav_tree)->count;                    \
+         _trav_id < ax__tree_count(_trav_tree);             \
          _trav_id++)                                        \
         if ((_n = ax__node_by_id(_trav_tree, _trav_id)), 1)
 
 #define FOR_EACH_FROM_BOTTOM(_n)                                \
-    for (_trav_id = _trav_tree->count;                          \
+    for (_trav_id = ax__tree_count(_trav_tree);                 \
          _trav_id > 0;                                          \
          _trav_id--)                                            \
         if ((_n = ax__node_by_id(_trav_tree, _trav_id - 1)), 1)

@@ -1,6 +1,7 @@
 #pragma once
 #include "base.h"
 #include "core/region.h"
+#include "core/growable.h"
 
 /*
  * (TODO: this module should be scrapped, I think)
@@ -35,10 +36,7 @@ struct ax_draw {
 };
 
 struct ax_draw_buf {
-    size_t len;
-    size_t cap;
-    struct ax_draw* data;
-    struct region cur_rgn, swap_rgn;
+    struct growable growable;
 };
 
 void ax__init_draw_buf(struct ax_draw_buf* db);
@@ -50,6 +48,18 @@ void ax__swap_draw_bufs(struct ax_draw_buf* fst, struct ax_draw_buf* snd)
     struct ax_draw_buf tmp = *fst;
     *fst = *snd;
     *snd = tmp;
+}
+
+static inline
+struct ax_draw* ax__draw_buf_data(struct ax_draw_buf* db)
+{
+    return db->growable.data;
+}
+
+static inline
+const size_t ax__draw_buf_count(const struct ax_draw_buf* db)
+{
+    return LEN(&db->growable, struct ax_draw);
 }
 
 void ax__redraw(struct ax_tree* tr, struct ax_draw_buf* db);

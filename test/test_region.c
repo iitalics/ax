@@ -1,5 +1,7 @@
 #include "helpers.h"
+#include "../src/base.h"
 #include "../src/core/region.h"
+#include "../src/core/growable.h"
 
 struct list {
     int elem;
@@ -82,4 +84,34 @@ TEST(rgn_big)
         (void) ALLOCATE(rgn, struct big);
     }
     ax__free_region(rgn);
+}
+
+TEST(grow_structs)
+{
+    struct growable g;
+    ax__init_growable(&g, DEFAULT_CAPACITY);
+    for (int i = 0; i < 100; i++) { PUSH(&g, &AX_DIM(i, i * 0.5)); }
+    struct ax_dim* dims = g.data;
+    for (int i = 0; i < 100; i++) { CHECK_DIMEQ(dims[i], AX_DIM(i, i * 0.5)); }
+    ax__growable_clear(&g);
+    CHECK_TRUE(ax__is_growable_empty(&g));
+    for (int i = 0; i < 50; i++) { PUSH(&g, &AX_DIM(i, i * 0.3)); }
+    dims = g.data;
+    for (int i = 0; i < 50; i++) { CHECK_DIMEQ(dims[i], AX_DIM(i, i * 0.3)); }
+    ax__free_growable(&g);
+}
+
+TEST(grow_string)
+{
+    struct growable g;
+    ax__init_growable(&g, DEFAULT_CAPACITY);
+    ax__growable_clear_str(&g);
+    CHECK_STREQ((char*) g.data, "");
+    ax__growable_push_str(&g, "hello");
+    CHECK_STREQ((char*) g.data, "hello");
+    ax__growable_push_char(&g, ',');
+    CHECK_STREQ((char*) g.data, "hello,");
+    ax__growable_push_str(&g, " world");
+    CHECK_STREQ((char*) g.data, "hello, world");
+    ax__free_growable(&g);
 }
