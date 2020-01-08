@@ -9,51 +9,92 @@
 #include "../geom.h"
 #include "../utils.h"
 
-#define LOCK(res, _body) do {                   \
-        pthread_mutex_lock(&res ## _mx);        \
-        _body;                                  \
-        pthread_mutex_unlock(&res ## _mx);      \
-    } while (0)
+enum async_msg_type {
+    AM_QUIT = 0,
+    AM_SET_DIM,
+    AM_SET_BACKEND,
+    AM_SWAP_TREE,
+    AM_SWAP_DRAW_BUF,
+    AM_WAIT_FOR_LAYOUT,
+    AM_EVT_WAKE_UP,
+    AM__MAX,
+};
 
-#define SEND(sys, _msg, _setup)                     \
-    LOCK(sys.msg, {                                 \
-            sys.msg |= (_msg);                      \
-            _setup;                                 \
-            pthread_cond_signal(&sys.new_msg_cv);   \
-        })
-
-#define SEND_SYNC(sys, cv, _msg, _setup) do {   \
-        SEND(sys, _msg, {                       \
-                _setup;                         \
-                pthread_mutex_lock(&cv ## _mx); \
-            });                                 \
-        pthread_cond_wait(&cv, &cv ## _mx);     \
-        pthread_mutex_unlock(&cv ## _mx);       \
-    } while (0)
-
-#define NOTIFY(cv) LOCK(cv, pthread_cond_broadcast(&cv))
-
-#define RECV(sys, _msg, _wait, _body)               \
-    LOCK(sys.msg, {                                 \
-            if (sys.msg == 0 && (_wait)) {          \
-                pthread_cond_wait(&sys.new_msg_cv,  \
-                                  &sys.msg_mx);     \
-            }                                       \
-            _msg = sys.msg;                         \
-            sys.msg = 0;                            \
-            _body;                                  \
-        });
-
-#define JOIN(sys) do {                                          \
-        void* _ret;                                             \
-        ASSERT(pthread_join(sys.thd, &_ret) == 0,               \
-               "%s", strerror(errno));                          \
-        ASSERT(_ret == &sys, "thread didn't exit properly");    \
-    } while (0)
+struct async_msg {
+    enum async_msg_type ty;
+    union {
+        struct ax_dim dim;
+        struct ax_backend* backend;
+    };
+};
 
 static void* layout_thd(void*);
 static void* ui_thd(void*);
 static void* evt_thd(void*);
+
+static void start_mqt(struct ax_async_mqt* t,
+                      const char* name,
+                      void* (*func)(void*),
+                      struct ax_async* async)
+{
+    t->name = name;
+    ax__init_growable(&t->msgs, 4 * sizeof(struct async_msg));
+    pthread_mutex_init(&t->msgs_mx, NULL);
+    pthread_cond_init(&t->msgs_cv, NULL);
+    pthread_create(&t->thd_id, NULL, func, async);
+}
+
+static void join_mqt(struct ax_async_mqt* t)
+{
+    void* ret = NULL;
+    pthread_join(t->thd_id, &ret);
+    ASSERT(ret == t, "'%s' thread didn't return correctly", t->name);
+
+    pthread_cond_destroy(&t->msgs_cv);
+    pthread_mutex_destroy(&t->msgs_mx);
+    ax__free_growable(&t->msgs);
+}
+
+static inline struct async_msg* mqt_start_send(struct ax_async_mqt* t)
+{
+    pthread_mutex_lock(&t->msgs_mx);
+    return ax__growable_extend(&t->msgs, sizeof(struct async_msg));
+}
+
+static inline void mqt_finish_send(struct ax_async_mqt* t)
+{
+    pthread_cond_signal(&t->msgs_cv);
+    pthread_mutex_unlock(&t->msgs_mx);
+}
+
+static inline size_t mqt_start_recv(struct ax_async_mqt* t, bool wait)
+{
+    pthread_mutex_lock(&t->msgs_mx);
+    if (wait && ax__is_growable_empty(&t->msgs)) {
+        pthread_cond_wait(&t->msgs_cv, &t->msgs_mx);
+    }
+    size_t n = LEN(&t->msgs, struct async_msg);
+    ax__growable_clear(&t->msgs);
+    return n;
+}
+
+static inline
+struct async_msg* mqt_inbox(struct ax_async_mqt* t, size_t i)
+{
+    return &((struct async_msg*) t->msgs.data)[i];
+}
+
+static inline void mqt_finish_recv(struct ax_async_mqt* t)
+{
+    pthread_mutex_unlock(&t->msgs_mx);
+}
+
+static inline void mqt_send_quit(struct ax_async_mqt* t)
+{
+    struct async_msg* msg = mqt_start_send(t);
+    msg->ty = AM_QUIT;
+    mqt_finish_send(t);
+}
 
 void ax__init_async(struct ax_async* async,
                     struct ax_geom* geom_subsys,
@@ -65,117 +106,91 @@ void ax__init_async(struct ax_async* async,
     async->layout.tree = tree_subsys;
     ax__init_draw_buf(&async->layout.draw_buf);
     ax__init_tree(&async->layout.in_tree);
-    async->layout.msg = 0;
-    pthread_mutex_init(&async->layout.msg_mx, NULL);
     pthread_mutex_init(&async->layout.on_layout_mx, NULL);
-    pthread_cond_init(&async->layout.new_msg_cv, NULL);
     pthread_cond_init(&async->layout.on_layout, NULL);
-    pthread_create(&async->layout.thd, NULL, layout_thd, (void*) async);
 
     // ui
     ax__init_draw_buf(&async->ui.disp_draw_buf);
     ax__init_draw_buf(&async->ui.in_draw_buf);
-    async->ui.msg = 0;
-    pthread_mutex_init(&async->ui.msg_mx, NULL);
-    pthread_mutex_init(&async->ui.on_close_mx, NULL);
-    pthread_cond_init(&async->ui.new_msg_cv, NULL);
-    pthread_cond_init(&async->ui.on_close, NULL);
-    pthread_create(&async->ui.thd, NULL, ui_thd, (void*) async);
 
     // evt
     async->evt.write_fd = evt_write_fd;
-    async->evt.msg = 0;
     async->evt.pending_close_evt = false;
-    pthread_mutex_init(&async->evt.msg_mx, NULL);
-    pthread_cond_init(&async->evt.new_msg_cv, NULL);
-    pthread_create(&async->evt.thd, NULL, evt_thd, (void*) async);
+
+    start_mqt(&async->layout.t, "layout", layout_thd, async);
+    start_mqt(&async->ui.t, "ui", ui_thd, async);
+    start_mqt(&async->evt.t, "evt", evt_thd, async);
 }
 
 void ax__free_async(struct ax_async* async)
 {
-    SEND(async->layout, ASYNC_QUIT, {});
-    SEND(async->ui, ASYNC_QUIT, {});
-    SEND(async->evt, ASYNC_QUIT, {});
-
-    JOIN(async->layout);
-    JOIN(async->ui);
-    JOIN(async->evt);
+    mqt_send_quit(&async->layout.t);
+    mqt_send_quit(&async->ui.t);
+    mqt_send_quit(&async->evt.t);
+    join_mqt(&async->layout.t);
+    join_mqt(&async->ui.t);
+    join_mqt(&async->evt.t);
 
     pthread_cond_destroy(&async->layout.on_layout);
-    pthread_cond_destroy(&async->layout.new_msg_cv);
     pthread_mutex_destroy(&async->layout.on_layout_mx);
-    pthread_mutex_destroy(&async->layout.msg_mx);
     ax__free_tree(&async->layout.in_tree);
     ax__free_draw_buf(&async->layout.draw_buf);
 
-    pthread_cond_destroy(&async->ui.on_close);
-    pthread_cond_destroy(&async->ui.new_msg_cv);
-    pthread_mutex_destroy(&async->ui.on_close_mx);
-    pthread_mutex_destroy(&async->ui.msg_mx);
     ax__free_draw_buf(&async->ui.in_draw_buf);
     ax__free_draw_buf(&async->ui.disp_draw_buf);
-
-    pthread_cond_destroy(&async->evt.new_msg_cv);
-    pthread_mutex_destroy(&async->evt.msg_mx);
-}
-
-static void layout_thd_handle(struct ax_async* async, int msg,
-                              bool* out_quit, bool* out_needs_layout,
-                              bool* out_notify_about_layout)
-{
-    if (msg & ASYNC_QUIT) {
-        *out_quit = true;
-    }
-    if (msg & ASYNC_SET_DIM) {
-        *out_needs_layout = true;
-        async->layout.geom->root_dim = async->layout.in_dim;
-    }
-    if (msg & ASYNC_SWAP_TREES) {
-        *out_needs_layout = true;
-        ax__swap_trees(async->layout.tree, &async->layout.in_tree);
-    }
-    if (msg & ASYNC_WAIT_FOR_LAYOUT) {
-        *out_notify_about_layout = true;
-    }
 }
 
 static void* layout_thd(void* ud)
 {
     struct ax_async* async = ud;
     for (bool quit = false; !quit; ) {
+        bool swap_tree = false;
         bool needs_layout = false;
         bool notify_about_layout = false;
-        int msg;
-        RECV(async->layout, msg, true,
-             layout_thd_handle(async, msg, &quit, &needs_layout, &notify_about_layout));
+
+        size_t n_msgs = mqt_start_recv(&async->layout.t, true);
+        for (size_t i = 0; i < n_msgs; i++) {
+            struct async_msg* msg = mqt_inbox(&async->layout.t, i);
+            switch (msg->ty) {
+            case AM_QUIT:
+                quit = true;
+                break;
+            case AM_SET_DIM:
+                needs_layout = true;
+                async->layout.geom->root_dim = msg->dim;
+                break;
+            case AM_SWAP_TREE:
+                needs_layout = true;
+                swap_tree = true;
+                break;
+            case AM_WAIT_FOR_LAYOUT:
+                notify_about_layout = true;
+                break;
+            default: break;
+            }
+        }
+        if (swap_tree) {
+            ax__swap_trees(async->layout.tree, &async->layout.in_tree);
+        }
+        mqt_finish_recv(&async->layout.t);
 
         if (needs_layout) {
             ax__layout(async->layout.tree, async->layout.geom);
             ax__redraw(async->layout.tree, &async->layout.draw_buf);
-            SEND(async->ui, ASYNC_SWAP_BUFFERS,
-                 ax__swap_draw_bufs(&async->ui.in_draw_buf,
-                                    &async->layout.draw_buf));
+
+            struct async_msg* msg = mqt_start_send(&async->ui.t);
+            msg->ty = AM_SWAP_DRAW_BUF;
+            ax__swap_draw_bufs(&async->ui.in_draw_buf, &async->layout.draw_buf);
+            mqt_finish_send(&async->ui.t);
         }
 
         if (notify_about_layout) {
-            NOTIFY(async->layout.on_layout);
+            pthread_mutex_lock(&async->layout.on_layout_mx);
+            pthread_cond_broadcast(&async->layout.on_layout);
+            pthread_mutex_unlock(&async->layout.on_layout_mx);
         }
     }
-    return &async->layout;
-}
-
-static void ui_thd_handle(struct ax_async* async, int msg,
-                          bool* out_quit, struct ax_backend** out_bac)
-{
-    if (msg & ASYNC_QUIT) {
-        *out_quit = true;
-    }
-    if (msg & ASYNC_SET_BACKEND) {
-        *out_bac = async->ui.in_backend;
-    }
-    if (msg & ASYNC_SWAP_BUFFERS) {
-        ax__swap_draw_bufs(&async->ui.disp_draw_buf, &async->ui.in_draw_buf);
-    }
+    return &async->layout.t;
 }
 
 static void ui_thd_step(struct ax_async* async, struct ax_backend* bac)
@@ -208,15 +223,35 @@ static void* ui_thd(void* ud)
     struct ax_backend* bac = NULL;
     bool quit = false;
     while (!quit) {
+        bool swap_draw_buf = false;
+
+        size_t n_msgs = mqt_start_recv(&async->ui.t, bac == NULL);
+        for (size_t i = 0; i < n_msgs; i++) {
+            struct async_msg* msg = mqt_inbox(&async->ui.t, i);
+            switch (msg->ty) {
+            case AM_QUIT:
+                quit = true;
+                break;
+            case AM_SET_BACKEND:
+                bac = msg->backend;
+                break;
+            case AM_SWAP_DRAW_BUF:
+                swap_draw_buf = true;
+                break;
+            default: break;
+            }
+        }
+        if (swap_draw_buf) {
+            ax__swap_draw_bufs(&async->ui.disp_draw_buf,
+                               &async->ui.in_draw_buf);
+        }
+        mqt_finish_recv(&async->ui.t);
+
         if (bac != NULL) {
             ui_thd_step(async, bac);
         }
-
-        int msg;
-        RECV(async->ui, msg, bac == NULL,
-             ui_thd_handle(async, msg, &quit, &bac));
     }
-    return &async->ui;
+    return &async->ui.t;
 }
 
 static void* evt_thd(void* ud)
@@ -224,56 +259,66 @@ static void* evt_thd(void* ud)
     struct ax_async* async = ud;
     bool quit = false;
     while (!quit) {
-        bool close_evt;
-        int msg;
-        RECV(async->evt, msg, true, {
-                if (msg & ASYNC_QUIT) {
-                    quit = true;
-                }
-                close_evt = async->evt.pending_close_evt;
-                async->evt.pending_close_evt = false;
-            });
+        size_t n_msgs = mqt_start_recv(&async->evt.t, true);
+        for (size_t i = 0; i < n_msgs; i++) {
+            struct async_msg* msg = mqt_inbox(&async->evt.t, i);
+            switch (msg->ty) {
+            case AM_QUIT:
+                quit = true;
+                break;
+            default: break;
+            }
+        }
+        bool close_evt = async->evt.pending_close_evt;
+        async->evt.pending_close_evt = false;
+        mqt_finish_recv(&async->evt.t);
 
         if (close_evt) {
             write(async->evt.write_fd, "C", 1);
         }
     }
-    return &async->evt;
+    return &async->evt.t;
 }
 
 void ax__async_set_dim(struct ax_async* async, struct ax_dim dim)
 {
-    SEND(async->layout,
-         ASYNC_SET_DIM,
-         async->layout.in_dim = dim);
+    struct async_msg* msg = mqt_start_send(&async->layout.t);
+    msg->ty = AM_SET_DIM;
+    msg->dim = dim;
+    mqt_finish_send(&async->layout.t);
 }
 
 void ax__async_set_tree(struct ax_async* async, struct ax_tree* new_tree)
 {
-    SEND(async->layout,
-         ASYNC_SWAP_TREES,
-         ax__swap_trees(&async->layout.in_tree, new_tree));
+    struct async_msg* msg = mqt_start_send(&async->layout.t);
+    msg->ty = AM_SWAP_TREE;
+    ax__swap_trees(&async->layout.in_tree, new_tree);
+    mqt_finish_send(&async->layout.t);
     ax__tree_clear(new_tree);
 }
 
 void ax__async_set_backend(struct ax_async* async, struct ax_backend* bac)
 {
-    SEND(async->ui,
-         ASYNC_SET_BACKEND,
-         async->ui.in_backend = bac);
+    struct async_msg* msg = mqt_start_send(&async->ui.t);
+    msg->ty = AM_SET_BACKEND;
+    msg->backend = bac;
+    mqt_finish_send(&async->ui.t);
 }
 
 void ax__async_wait_for_layout(struct ax_async* async)
 {
-    SEND_SYNC(async->layout,
-              async->layout.on_layout,
-              ASYNC_WAIT_FOR_LAYOUT,
-              {});
+    struct async_msg* msg = mqt_start_send(&async->layout.t);
+    msg->ty = AM_WAIT_FOR_LAYOUT;
+    pthread_mutex_lock(&async->layout.on_layout_mx);
+    mqt_finish_send(&async->layout.t);
+    pthread_cond_wait(&async->layout.on_layout, &async->layout.on_layout_mx);
+    pthread_mutex_unlock(&async->layout.on_layout_mx);
 }
 
 void ax__async_push_close_evt(struct ax_async* async)
 {
-    SEND(async->evt,
-         ASYNC_WAKE_UP,
-         async->evt.pending_close_evt = true);
+    struct async_msg* msg = mqt_start_send(&async->evt.t);
+    msg->ty = AM_EVT_WAKE_UP;
+    async->evt.pending_close_evt = true;
+    mqt_finish_send(&async->evt.t);
 }
