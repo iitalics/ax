@@ -64,12 +64,11 @@ void ax__init_async(struct ax_async* async,
     async->layout.geom = geom_subsys;
     async->layout.tree = tree_subsys;
     ax__init_draw_buf(&async->layout.draw_buf);
+    ax__init_tree(&async->layout.in_tree);
     async->layout.msg = 0;
     pthread_mutex_init(&async->layout.msg_mx, NULL);
-    pthread_mutex_init(&async->layout.in_tree_drained_mx, NULL);
     pthread_mutex_init(&async->layout.on_layout_mx, NULL);
     pthread_cond_init(&async->layout.new_msg_cv, NULL);
-    pthread_cond_init(&async->layout.in_tree_drained, NULL);
     pthread_cond_init(&async->layout.on_layout, NULL);
     pthread_create(&async->layout.thd, NULL, layout_thd, (void*) async);
 
@@ -103,11 +102,10 @@ void ax__free_async(struct ax_async* async)
     JOIN(async->evt);
 
     pthread_cond_destroy(&async->layout.on_layout);
-    pthread_cond_destroy(&async->layout.in_tree_drained);
     pthread_cond_destroy(&async->layout.new_msg_cv);
     pthread_mutex_destroy(&async->layout.on_layout_mx);
-    pthread_mutex_destroy(&async->layout.in_tree_drained_mx);
     pthread_mutex_destroy(&async->layout.msg_mx);
+    ax__free_tree(&async->layout.in_tree);
     ax__free_draw_buf(&async->layout.draw_buf);
 
     pthread_cond_destroy(&async->ui.on_close);
@@ -132,10 +130,9 @@ static void layout_thd_handle(struct ax_async* async, int msg,
         *out_needs_layout = true;
         async->layout.geom->root_dim = async->layout.in_dim;
     }
-    if (msg & ASYNC_SET_TREE) {
+    if (msg & ASYNC_SWAP_TREES) {
         *out_needs_layout = true;
-        ax__tree_drain_from(async->layout.tree, async->layout.in_tree);
-        NOTIFY(async->layout.in_tree_drained);
+        ax__swap_trees(async->layout.tree, &async->layout.in_tree);
     }
     if (msg & ASYNC_WAIT_FOR_LAYOUT) {
         *out_notify_about_layout = true;
@@ -155,7 +152,7 @@ static void* layout_thd(void* ud)
         if (needs_layout) {
             ax__layout(async->layout.tree, async->layout.geom);
             ax__redraw(async->layout.tree, &async->layout.draw_buf);
-            SEND(async->ui, ASYNC_FLIP_BUFFERS,
+            SEND(async->ui, ASYNC_SWAP_BUFFERS,
                  ax__swap_draw_bufs(&async->ui.in_draw_buf,
                                     &async->layout.draw_buf));
         }
@@ -176,7 +173,7 @@ static void ui_thd_handle(struct ax_async* async, int msg,
     if (msg & ASYNC_SET_BACKEND) {
         *out_bac = async->ui.in_backend;
     }
-    if (msg & ASYNC_FLIP_BUFFERS) {
+    if (msg & ASYNC_SWAP_BUFFERS) {
         ax__swap_draw_bufs(&async->ui.disp_draw_buf, &async->ui.in_draw_buf);
     }
 }
@@ -253,10 +250,10 @@ void ax__async_set_dim(struct ax_async* async, struct ax_dim dim)
 
 void ax__async_set_tree(struct ax_async* async, struct ax_tree* new_tree)
 {
-    SEND_SYNC(async->layout,
-              async->layout.in_tree_drained,
-              ASYNC_SET_TREE,
-              async->layout.in_tree = new_tree);
+    SEND(async->layout,
+         ASYNC_SWAP_TREES,
+         ax__swap_trees(&async->layout.in_tree, new_tree));
+    ax__tree_clear(new_tree);
 }
 
 void ax__async_set_backend(struct ax_async* async, struct ax_backend* bac)

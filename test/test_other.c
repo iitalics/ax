@@ -1,6 +1,7 @@
 #include "helpers.h"
 #include "../src/ax.h"
 #include "../src/core.h"
+#include "../src/core/async.h"
 #include "../src/tree.h"
 
 TEST(die)
@@ -49,6 +50,7 @@ TEST(die_font_bad_spec_error)
                      "            (text \"hello\" (font \"bad\")))))");
     CHECK_IEQ(r, 1);
     CHECK_STREQ(ax_get_error(s), "invalid fake font");
+    ax__async_wait_for_layout(s->async);
     CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 0); // tree wasn't set
     ax_destroy_state(s);
 }
@@ -61,6 +63,7 @@ TEST(die_recover)
     CHECK_STREQ(ax_get_error(s), "backend already initialized");
     r = ax_write(s, "(set-root (container (children (rect) (rect))))");
     CHECK_IEQ(r, 0);
+    ax__async_wait_for_layout(s->async);
     CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 3);
     ax_destroy_state(s);
 }
@@ -99,6 +102,7 @@ TEST(build_big_tree)
     W(")))");
 #undef W
     CHECK_IEQ(ax_write_end(s), 0);
+    ax__async_wait_for_layout(s->async);
     CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 1001);
     ax_destroy_state(s);
 }

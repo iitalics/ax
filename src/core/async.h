@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include "../backend.h"
 #include "../draw.h"
+#include "../tree.h"
 
 struct ax_state;
 struct ax_geom;
@@ -12,11 +13,11 @@ enum {
     ASYNC_QUIT            = 1 << 1,
     // layout
     ASYNC_SET_DIM         = 1 << 2,
-    ASYNC_SET_TREE        = 1 << 3,
+    ASYNC_SWAP_TREES      = 1 << 3,
     ASYNC_WAIT_FOR_LAYOUT = 1 << 6,
     // ui
     ASYNC_SET_BACKEND     = 1 << 4,
-    ASYNC_FLIP_BUFFERS    = 1 << 5,
+    ASYNC_SWAP_BUFFERS    = 1 << 5,
     // evt
     ASYNC_WAKE_UP         = 1 << 7,
 };
@@ -35,9 +36,7 @@ struct ax_async {
         MESSAGE_QUEUE_VARS();
 
         struct ax_dim volatile in_dim;
-        struct ax_tree* volatile in_tree;
-        pthread_cond_t in_tree_drained;
-        pthread_mutex_t in_tree_drained_mx;
+        struct ax_tree in_tree;
 
         pthread_cond_t on_layout;
         pthread_mutex_t on_layout_mx;

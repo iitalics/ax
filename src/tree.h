@@ -100,13 +100,11 @@ int ax__build_node(struct ax_state* s,     // used for ax__set_error()
                    node_id* out_id);
 
 static inline
-void ax__tree_drain_from(struct ax_tree* tr,
-                         struct ax_tree* other)
+void ax__swap_trees(struct ax_tree* fst, struct ax_tree* snd)
 {
-    struct ax_tree tmp = *tr;
-    *tr = *other;
-    *other = tmp;
-    ax__tree_clear(other);
+    struct ax_tree tmp = *fst;
+    *fst = *snd;
+    *snd = tmp;
 }
 
 static inline
