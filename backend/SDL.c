@@ -52,8 +52,7 @@ int ax__new_backend(struct ax_state* ax, struct ax_backend** out_bac)
         goto sdl_err;
     }
 
-    struct ax_backend* bac = malloc(sizeof(struct ax_backend));
-    ASSERT(bac != NULL, "malloc ax_backend (SDL)");
+    struct ax_backend* bac = ALLOCATE(&ax->init_rgn, struct ax_backend);
     *bac = b;
     *out_bac = bac;
     return 0;
@@ -72,7 +71,6 @@ void ax__destroy_backend(struct ax_backend* bac)
 {
     if (bac != NULL) {
         free_backend(bac);
-        free(bac);
     }
 }
 

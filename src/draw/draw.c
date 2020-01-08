@@ -1,3 +1,4 @@
+#include <string.h>
 #define AX_DEFINE_TRAVERSAL_MACROS
 #include "../tree.h"
 #include "../draw.h"
@@ -5,24 +6,29 @@
 
 void ax__init_draw_buf(struct ax_draw_buf* db)
 {
-    ASSERT(db != NULL, "malloc ax_draw_buf");
+    ax__init_region(&db->cur_rgn);
+    ax__init_region(&db->swap_rgn);
+
+    db->data = ALLOCATES(&db->cur_rgn, struct ax_draw, db->cap = 4);
     db->len = 0;
-    db->cap = 4;
-    db->data = malloc(sizeof(struct ax_draw) * db->cap);
-    ASSERT(db->data != NULL, "malloc ax_draw_buf.data");
 }
 
 void ax__free_draw_buf(struct ax_draw_buf* db)
 {
-    free(db->data);
+    ax__free_region(&db->swap_rgn);
+    ax__free_region(&db->cur_rgn);
 }
 
 static struct ax_draw* draw_buf_ins(struct ax_draw_buf* db)
 {
     if (db->len >= db->cap) {
-        db->cap *= 2;
-        db->data = realloc(db->data, db->cap * sizeof(struct ax_draw));
-        ASSERT(db->data != NULL, "realloc ax_draw_buf.data");
+        size_t new_cap = db->cap * 2;
+        struct ax_draw* new_data = ALLOCATES(&db->swap_rgn, struct ax_draw, new_cap);
+        memcpy(new_data, db->data, sizeof(struct ax_draw) * db->cap);
+        db->data = new_data;
+        db->cap = new_cap;
+        ax__swap_regions(&db->cur_rgn, &db->swap_rgn);
+        ax__region_clear(&db->swap_rgn);
     }
     return &db->data[db->len++];
 }

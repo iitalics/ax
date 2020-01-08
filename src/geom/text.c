@@ -5,6 +5,7 @@
 #include "text.h"
 #include "../backend.h"
 #include "../utils.h"
+#include "../core/region.h"
 
 static ax_length dummy_measure_fn(const char* str, void* ud)
 {
@@ -22,12 +23,12 @@ static ax_length font_measure_fn(const char* str, void* ud)
 }
 
 
-void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
+void ax__text_iter_init(struct region* rgn, struct ax_text_iter* ti, const char* text)
 {
+    ti->rgn = rgn;
     ti->text = text;
     ti->word = NULL;
-    ti->line = malloc(strlen(text) + 1);
-    ASSERT(ti->line != NULL, "malloc ax_text_iter.line");
+    ti->line = ALLOCATES(rgn, char, strlen(text) + 1);
     ti->line_len = 0;
     ti->line_need_reset = false;
 
@@ -36,18 +37,11 @@ void ax__text_iter_init(struct ax_text_iter* ti, const char* text)
     ti->max_width = 0.0;
 }
 
-void ax__text_iter_free(struct ax_text_iter* ti)
-{
-    free(ti->line);
-    free(ti->word);
-}
-
 void ax__text_iter_set_font(struct ax_text_iter* ti, struct ax_font* font)
 {
     ti->mf = font_measure_fn;
     ti->mf_userdata = font;
 }
-
 
 static inline const char* beg_of_word(const char* s, bool* is_eol)
 {
@@ -88,9 +82,7 @@ enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti)
     } else {
 
         size_t w_len = eow - bow;
-        free(ti->word);
-        ti->word = malloc(w_len + 1);
-        ASSERT(ti->word != NULL, "malloc ax_text_iter.word");
+        ti->word = ALLOCATES(ti->rgn, char, w_len + 1);
         memcpy(ti->word, bow, w_len);
         ti->word[w_len] = '\0';
 

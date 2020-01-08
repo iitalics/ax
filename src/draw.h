@@ -1,5 +1,6 @@
 #pragma once
 #include "base.h"
+#include "core/region.h"
 
 /*
  * (TODO: this module should be scrapped, I think)
@@ -37,6 +38,7 @@ struct ax_draw_buf {
     size_t len;
     size_t cap;
     struct ax_draw* data;
+    struct region cur_rgn, swap_rgn;
 };
 
 void ax__init_draw_buf(struct ax_draw_buf* db);

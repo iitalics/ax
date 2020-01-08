@@ -1,6 +1,7 @@
 #pragma once
 #include "../base.h"
 #include "../sexp.h"
+#include "../core/region.h"
 
 struct ax_state;
 struct ax_desc;
@@ -8,6 +9,7 @@ struct ax_desc;
 struct ax_interp {
     int err;
     char* err_msg;
+    struct region err_msg_rgn;
 
     // for sexp lexer
     int state;
@@ -18,6 +20,7 @@ struct ax_interp {
     // for building nodes
     struct ax_desc* desc;
     struct ax_desc* parent_desc;
+    struct region desc_rgn;
 
     // for parsing primitive types
     int mode;

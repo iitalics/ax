@@ -14,20 +14,14 @@ struct ax_font {
 
 int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
 {
-    (void) s;
-
-    struct ax_backend b = {
-        .ds = NULL,
-        .ds_len = 0,
-    };
-    pthread_mutex_init(&b.sig_mx, NULL);
-    b.sig.close = false;
-    pthread_cond_init(&b.sync, NULL);
-    pthread_mutex_init(&b.sync_mx, NULL);
-
-    struct ax_backend* bac = malloc(sizeof(struct ax_backend));
-    ASSERT(bac != 0, "malloc fake ax_backend");
-    *bac = b;
+    struct ax_backend* bac = ALLOCATE(&s->init_rgn, struct ax_backend);
+    bac->ds = NULL;
+    bac->ds_len = 0;
+    pthread_mutex_init(&bac->sig_mx, NULL);
+    bac->sig.close = false;
+    pthread_cond_init(&bac->sync, NULL);
+    pthread_mutex_init(&bac->sync_mx, NULL);
+    ax__init_region(&bac->font_rgn);
     *out_bac = bac;
     return 0;
 }
@@ -35,10 +29,10 @@ int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
 void ax__destroy_backend(struct ax_backend* bac)
 {
     if (bac != NULL) {
+        ax__free_region(&bac->font_rgn);
         pthread_mutex_destroy(&bac->sync_mx);
         pthread_cond_destroy(&bac->sync);
         pthread_mutex_destroy(&bac->sig_mx);
-        free(bac);
     }
 }
 
@@ -110,23 +104,18 @@ void ax_test_backend_sync_until(struct ax_backend* bac, size_t desired_len)
 int ax__new_font(struct ax_state* s, struct ax_backend* bac,
                  const char* desc, struct ax_font** out_font)
 {
-    (void) bac;
     // "size:<N>"
     if (strncmp(desc, "size:", 5) != 0) {
         ax__set_error(s, "invalid fake font");
         return 1;
     }
-    struct ax_font* font = malloc(sizeof(struct ax_font));
-    ASSERT(font != NULL, "malloc ax_length for fake font");
+    struct ax_font* font = ALLOCATE(&bac->font_rgn, struct ax_font);
     font->size = strtol(desc + 5, NULL, 10);
     *out_font = font;
     return 0;
 }
 
-void ax__destroy_font(struct ax_font* font)
-{
-    free(font);
-}
+void ax__destroy_font(struct ax_font* font) { (void) font; }
 
 void ax__measure_text(
     struct ax_font* font,

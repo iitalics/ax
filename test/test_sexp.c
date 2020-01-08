@@ -42,11 +42,10 @@ TEST(sexp_chars)
 }
 
 
-static char* sexp_readout(const char* input)
+static void sexp_readout(const char* input, char* out_start)
 {
     char const* const inp_end = input + strlen(input);
     char* inp = (char*) input;
-    char* const out_start = malloc(4096);
     char* out = out_start;
     out += sprintf(out, "{");
     struct ax_lexer lex;
@@ -77,13 +76,12 @@ static char* sexp_readout(const char* input)
         sprintf(out - 1, "}");
     }
     ax__free_lexer(&lex);
-    return out_start;
 }
 
 #define CHECK_SEXP(_inp, _out) do {             \
-        char* _ch_out = sexp_readout(_inp);     \
-        CHECK_STREQ(_ch_out, _out);             \
-        free(_ch_out); } while(0)
+        char _buf[512];                         \
+        sexp_readout(_inp, _buf);               \
+        CHECK_STREQ(_buf, _out); } while(0)
 
 
 TEST(sexp_empty)

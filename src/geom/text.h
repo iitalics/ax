@@ -1,11 +1,13 @@
 #pragma once
 #include "../base.h"
 
+struct region;
 struct ax_font;
 
 typedef ax_length (*ax_text_measure_fn)(const char*, void*);
 
 struct ax_text_iter {
+    struct region* rgn;
     const char* text;
     char* word;
     char* line;
@@ -30,8 +32,7 @@ struct ax_text_metrics {
     ax_length line_spacing;
 };
 
-void ax__text_iter_init(struct ax_text_iter* ti, const char* text);
-void ax__text_iter_free(struct ax_text_iter* ti);
+void ax__text_iter_init(struct region* rgn, struct ax_text_iter* ti, const char* text);
 void ax__text_iter_set_font(struct ax_text_iter* ti, struct ax_font* font);
 
 enum ax_text_elem ax__text_iter_next(struct ax_text_iter* ti);

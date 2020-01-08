@@ -25,6 +25,7 @@ void ax__init_interp(struct ax_interp* it)
 {
     it->err = 0;
     it->err_msg = NULL;
+    ax__init_region(&it->err_msg_rgn);
 
     it->state = 0;
     it->ctx = -1;
@@ -32,19 +33,13 @@ void ax__init_interp(struct ax_interp* it)
 
     it->desc = NULL;
     it->parent_desc = NULL;
-}
-
-static void reset_desc(struct ax_interp* it)
-{
-    // TODO: free it->desc, it->parent_desc
-    it->desc = NULL;
-    it->parent_desc = NULL;
+    ax__init_region(&it->desc_rgn);
 }
 
 void ax__free_interp(struct ax_interp* it)
 {
-    reset_desc(it);
-    free(it->err_msg);
+    ax__free_region(&it->desc_rgn);
+    ax__free_region(&it->err_msg_rgn);
 }
 
 /* static void log_stack(struct ax_interp* it)
@@ -76,21 +71,17 @@ static void pop_ctx(struct ax_interp* it)
 static void end_init(struct ax_state* s, struct ax_interp* it)
 {
     if (ax__is_backend_initialized(s)) {
-#define STR "backend already initialized"
-        it->err_msg = malloc(strlen(STR) + 1);
-        strcpy(it->err_msg, STR);
+        it->err_msg = "backend already initialized";
         it->err = 1;
         return;
-#undef STR
     }
     ax__initialize_backend(s);
 }
 
 static void begin_node(struct ax_interp* it, enum ax_node_type ty)
 {
-    struct ax_desc* desc = malloc(sizeof(struct ax_desc));
-    ASSERT(desc != NULL, "malloc ax_desc");
-    // TODO: better way to make a default initialized node desc
+    struct ax_desc* desc = ALLOCATE(&it->desc_rgn, struct ax_desc);
+    // TODO: put node-default-initializing logic somewhere else?
     desc->ty = ty;
     switch (ty) {
     case AX_NODE_CONTAINER:
@@ -131,12 +122,9 @@ static void set_root(struct ax_state* s, struct ax_interp* it)
 {
     struct ax_backend* bac = s->backend;
     if (!ax__is_backend_initialized(s)) {
-#define STR "backend not initialized"
-        it->err_msg = malloc(strlen(STR) + 1);
-        strcpy(it->err_msg, STR);
+        it->err_msg = "backend not initialized";
         it->err = 1;
         goto cleanup1;
-#undef STR
     }
 
     struct ax_tree tree;
@@ -153,7 +141,9 @@ static void set_root(struct ax_state* s, struct ax_interp* it)
 cleanup2:
     ax__free_tree(&tree);
 cleanup1:
-    reset_desc(it);
+    it->desc = NULL;
+    it->parent_desc = NULL;
+    ax__region_clear(&it->desc_rgn);
 }
 
 static void begin_children(struct ax_interp* it)
@@ -210,17 +200,15 @@ static void string(struct ax_state* s, struct ax_interp* it, const char* str)
         printf("[LOG] %s\n", str);
         break;
     case M_DIE:
-        it->err_msg = malloc(strlen(str) + 1);
-        strcpy((char*) it->err_msg, str);
+        ax__region_clear(&it->err_msg_rgn);
+        it->err_msg = ax__strdup(&it->err_msg_rgn, str);
         it->err = 1;
         break;
     case M_TEXT:
-        it->desc->t.text = malloc(strlen(str) + 1);
-        strcpy((char*) it->desc->t.text, str);
+        it->desc->t.text = ax__strdup(&it->desc_rgn, str);
         break;
     case M_FONT:
-        it->desc->t.font_name = malloc(strlen(str) + 1);
-        strcpy((char*) it->desc->t.font_name, str);
+        it->desc->t.font_name = ax__strdup(&it->desc_rgn, str);
         break;
     case M_FILL:
     case M_TEXT_COLOR:
@@ -319,30 +307,18 @@ void ax__interp(struct ax_state* s,
 
 #include "../../_build/parser_rules.inc"
 
-ok: return;
+ok:
+    return;
 
-syntax_err: {
-        const char* ctx;
-        switch (it->state) {
-            // TODO: generate state names
-        default: ctx = "???";
-        }
-#define FMT "syntax error: expected %s"
-        size_t len = strlen(FMT) - 2 + strlen(ctx);
-        it->err_msg = malloc(len + 1);
-        sprintf(it->err_msg, FMT, ctx);
-        it->err = 1;
-        return;
-#undef FMT
-    }
+syntax_err:
+    // TODO: generate error message based on current state
+    it->err_msg = "syntax error: expected ???";
+    it->err = 1;
+    return;
 
-token_err: {
-#define FMT "syntax error: %s"
-        size_t len = strlen(FMT) - 2 + strlen(lex->str);
-        it->err_msg = malloc(len + 1);
-        sprintf(it->err_msg, FMT, lex->str);
-        it->err = 1;
-        return;
-#undef FMT
-    }
+token_err:
+    ax__region_clear(&it->err_msg_rgn);
+    it->err_msg = ax__strcat(&it->err_msg_rgn, "syntax error: ", lex->str);
+    it->err = 1;
+    return;
 }

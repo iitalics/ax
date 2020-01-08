@@ -1,5 +1,4 @@
 #include <string.h>
-
 #define AX_DEFINE_TRAVERSAL_MACROS
 #include "text.h"
 #include "../geom.h"
@@ -7,10 +6,31 @@
 #include "../backend.h"
 #include "../utils.h"
 
+void ax__init_geom(struct ax_geom* g)
+{
+    g->root_dim = AX_DIM(0.0, 0.0);
+    ax__init_region(&g->layout_rgn);
+    ax__init_region(&g->temp_rgn);
+}
+
+void ax__free_geom(struct ax_geom* g)
+{
+    ax__free_region(&g->temp_rgn);
+    ax__free_region(&g->layout_rgn);
+}
+
 #define MAIN(_d) (_d).w
 #define CROSS(_d) (_d).h
 #define MAX(_x, _y) (((_x) > (_y)) ? (_x) : (_y))
 #define MIN(_x, _y) ((_x) < (_y)) ? (_x) : (_y)
+
+/* IMPORTANT NOTES ABOUT THE TWO KINDS OF REGIONS:
+ * - allocate in "rgn" if the memory should persist after individual layout
+ *   passes (i.e., it's used in the next pass, or it's used for drawing).
+ * - allocate in "tmp_rgn" if the memory is temporary and only used for processing this
+ *   single node (i.e., if you had used malloc, you would free that memory at the bottom
+ *   of the function). you should clear the temp region before using it.
+ */
 
 static size_t n_children(struct ax_tree* tree, const struct ax_node* node)
 {
@@ -42,11 +62,14 @@ static void propagate_available_size(struct ax_tree* tr, struct ax_node* node)
     }
 }
 
-static void container_distribute_lines(struct ax_tree* tr, struct ax_node* node)
+static void container_distribute_lines(struct region* rgn,
+                                       struct ax_tree* tr,
+                                       struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
-    size_t* const line_count = calloc(n_children(tr, node), sizeof(size_t));
-    ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
+    size_t max_n = n_children(tr, node);
+    size_t* line_count = ALLOCATES(rgn, size_t, max_n);
+    memset(line_count, 0, sizeof(size_t) * max_n);
     ax_length const avail_size = MAIN(node->avail);
     size_t i = 0;
     ax_length line_size = 0.0;
@@ -65,16 +88,20 @@ static void container_distribute_lines(struct ax_tree* tr, struct ax_node* node)
     node->c.n_lines = n_lines;
 }
 
-static void container_single_line(struct ax_tree* tr, struct ax_node* node)
+static void container_single_line(struct region* rgn,
+                                  struct ax_tree* tr,
+                                  struct ax_node* node)
 {
-    size_t* const line_count = malloc(1 * sizeof(size_t));
-    ASSERT(line_count != NULL, "malloc ax_node_c.line_count");
+    size_t* line_count = ALLOCATES(rgn, size_t, 1);
     line_count[0] = n_children(tr, node);
     node->c.line_count = line_count;
     node->c.n_lines = 1;
 }
 
-static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
+static void compute_hypothetical_size(struct region* rgn,
+                                      struct region* tmp_rgn,
+                                      struct ax_tree* tr,
+                                      struct ax_node* node)
 {
     struct ax_dim hypoth;
     DEFINE_TRAVERSAL_LOCALS(tr, child);
@@ -82,13 +109,13 @@ static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
 
     case AX_NODE_CONTAINER: {
         if (node->c.single_line) {
-            container_single_line(tr, node);
+            container_single_line(rgn, tr, node);
         } else {
-            container_distribute_lines(tr, node);
+            container_distribute_lines(rgn, tr, node);
         }
         ax_length main = 0.0, cross = 0.0;
         struct ax_dim line = AX_DIM(0.0, 0.0);
-#define UPDATE() do {                                            \
+#define UPDATE() do {                                   \
             cross = cross + CROSS(line);                \
             main = MAX(main, MAIN(line)); } while (0)
         size_t li, i, prev_li = 0;
@@ -116,13 +143,13 @@ static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
 
     case AX_NODE_TEXT: {
         size_t n_lines = 0;
-        ax_length max_w = 0.0;
-        struct ax_text_metrics tm;
+        ax_length max_w = 0.0, text_h = 0.0, line_sp = 0.0;
         struct ax_text_iter ti;
-        enum ax_text_elem te;
-        ax__text_iter_init(&ti, node->t.text);
+        ax__region_clear(tmp_rgn);
+        ax__text_iter_init(tmp_rgn, &ti, node->t.text);
         ax__text_iter_set_font(&ti, node->t.font);
         ti.max_width = node->avail.w;
+        enum ax_text_elem te;
         do {
             te = ax__text_iter_next(&ti);
             switch (te) {
@@ -130,19 +157,22 @@ static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
                 break;
 
             case AX_TEXT_EOL:
-            case AX_TEXT_END:
+            case AX_TEXT_END: {
+                struct ax_text_metrics tm;
                 ax__measure_text(node->t.font, ti.line, &tm);
-                n_lines++;
                 max_w = MAX(max_w, tm.width);
+                text_h = tm.text_height;
+                line_sp = tm.line_spacing;
+                n_lines++;
                 break;
+            }
 
             default: NO_SUCH_TAG("ax_text_elem");
             }
         } while (te != AX_TEXT_END);
-        ax__text_iter_free(&ti);
 
         hypoth.w = max_w;
-        hypoth.h = tm.text_height + tm.line_spacing * (n_lines - 1);
+        hypoth.h = text_h + line_sp * (n_lines - 1);
         break;
     }
 
@@ -151,20 +181,21 @@ static void compute_hypothetical_size(struct ax_tree* tr, struct ax_node* node)
     node->hypoth = hypoth;
 }
 
-static void resolve_target_size(struct ax_tree* tr, struct ax_node* node)
+static void resolve_target_size(struct region* tmp_rgn,
+                                struct ax_tree* tr,
+                                struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     switch (node->ty) {
 
     case AX_NODE_CONTAINER: {
-        // TODO: pool allocation of these temporary arrays
         struct line_calc {
             ax_length factor_sum;
             ax_length cross_size;
             ax_length free_space;
         };
-        struct line_calc* const lines = calloc(node->c.n_lines, sizeof(struct line_calc));
-        ASSERT(lines != NULL, "malloc line_calc array");
+        ax__region_clear(tmp_rgn);
+        struct line_calc* lines = ALLOCATES(tmp_rgn, struct line_calc, node->c.n_lines);
         size_t li, i;
         for (li = 0; li < node->c.n_lines; li++) {
             lines[li].factor_sum = 0.0;
@@ -194,7 +225,6 @@ static void resolve_target_size(struct ax_tree* tr, struct ax_node* node)
             MAIN(child->target) = MAIN(child->hypoth) + flex;
             CROSS(child->target) = lines[li].cross_size;
         }
-        free(lines);
         break;
 #undef FACTOR
     }
@@ -244,7 +274,10 @@ static ax_length justify_padding(enum ax_justify j, ax_length space,
     return pad;
 }
 
-static void place_coords(struct ax_tree* tr, struct ax_node* node)
+static void place_coords(struct region* rgn,
+                         struct region* tmp_rgn,
+                         struct ax_tree* tr,
+                         struct ax_node* node)
 {
     DEFINE_TRAVERSAL_LOCALS(tr, child);
     switch (node->ty) {
@@ -254,8 +287,8 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
             ax_length flex_space;
             ax_length cross_size;
         };
-        struct line_calc* lines = calloc(node->c.n_lines, sizeof(struct line_calc));
-        ASSERT(lines != NULL, "malloc line_calc array");
+        ax__region_clear(tmp_rgn);
+        struct line_calc* lines = ALLOCATES(tmp_rgn, struct line_calc, node->c.n_lines);
         size_t li, i;
         for (li = 0; li < node->c.n_lines; li++) {
             lines[li].flex_space = MAIN(node->target);
@@ -297,7 +330,6 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
                             &child->coord.y);
             x += MAIN(child->target) + pad_x;
         }
-        free(lines);
         break;
 #undef START_LINE
     }
@@ -307,16 +339,15 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
 
     case AX_NODE_TEXT: {
         struct ax_pos coord = node->coord;
-        struct ax_node_t_line* line, *prev_line = NULL;
-        ax__free_node_t_line(node->t.lines);
-        node->t.lines = NULL;
-        struct ax_text_metrics tm;
+        struct ax_node_t_line* first_line = NULL, *prev_line = NULL;
+        struct ax_text_metrics tm; // TODO: helper function "ax__measure_line_spacing(font)"
         ax__measure_text(node->t.font, "", &tm);
         struct ax_text_iter ti;
-        enum ax_text_elem te;
-        ax__text_iter_init(&ti, node->t.text);
+        ax__region_clear(tmp_rgn);
+        ax__text_iter_init(tmp_rgn, &ti, node->t.text);
         ax__text_iter_set_font(&ti, node->t.font);
         ti.max_width = node->target.w;
+        enum ax_text_elem te;
         do {
             te = ax__text_iter_next(&ti);
             switch (te) {
@@ -325,15 +356,13 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
 
             case AX_TEXT_EOL:
             case AX_TEXT_END: {
-                line = malloc(sizeof(struct ax_node_t_line) +
-                              strlen(ti.line) + 1);
-                ASSERT(line != NULL, "mallox ax_node_t_line");
+                struct ax_node_t_line* line = ALLOCATE(rgn, struct ax_node_t_line);
                 line->next = NULL;
                 line->coord = coord;
-                strcpy(line->str, ti.line);
+                line->str = ax__strdup(rgn, ti.line);
                 coord.y += tm.line_spacing;
-                if (prev_line == NULL) {
-                    node->t.lines = line;
+                if (first_line == NULL) {
+                    first_line = line;
                 } else {
                     prev_line->next = line;
                 }
@@ -344,6 +373,7 @@ static void place_coords(struct ax_tree* tr, struct ax_node* node)
             default: NO_SUCH_TAG("ax_text_elem");
             }
         } while (te != AX_TEXT_END);
+        node->t.lines = first_line;
         break;
     }
 
@@ -360,22 +390,24 @@ void ax__layout(struct ax_tree* tr, struct ax_geom* g)
 
     DEFINE_TRAVERSAL_LOCALS(tr, node);
 
+    ax__region_clear(&g->layout_rgn);
+
     ax__root(tr)->avail = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
         propagate_available_size(tr, node);
     }
 
     FOR_EACH_FROM_BOTTOM(node) {
-        compute_hypothetical_size(tr, node);
+        compute_hypothetical_size(&g->layout_rgn, &g->temp_rgn, tr, node);
     }
 
     ax__root(tr)->target = g->root_dim;
     FOR_EACH_FROM_TOP(node) {
-        resolve_target_size(tr, node);
+        resolve_target_size(&g->temp_rgn, tr, node);
     }
 
     ax__root(tr)->coord = AX_POS(0.0, 0.0);
     FOR_EACH_FROM_TOP(node) {
-        place_coords(tr, node);
+        place_coords(&g->layout_rgn, &g->temp_rgn, tr, node);
     }
 }

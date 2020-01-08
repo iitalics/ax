@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "core/region.h"
 #include "utils.h"
 
 /*
@@ -46,10 +47,11 @@ enum ax_parse_error {
 };
 
 struct ax_lexer {
+    struct region cur_rgn, swap_rgn;
     int state;
-    char* str;
-    size_t len, cap;
     size_t paren_depth;
+    size_t len, cap;
+    char* str;
     enum ax_parse_error err;
 
     long i;

@@ -8,16 +8,16 @@
 
 void ax__init_tree(struct ax_tree* tr)
 {
+    ax__init_region(&tr->rgn);
     tr->count = 0;
-    tr->capacity = 512;
-    tr->nodes = malloc(sizeof(struct ax_node) * tr->capacity);
-    ASSERT(tr->nodes != NULL, "malloc ax_tree.nodes");
+    tr->nodes = ALLOCATES(&tr->rgn, struct ax_node, tr->capacity = 30);
+    // TODO: growable tree
 }
 
 void ax__free_tree(struct ax_tree* tr)
 {
     ax__tree_clear(tr);
-    free(tr->nodes);
+    ax__free_region(&tr->rgn);
 }
 
 void ax__tree_clear(struct ax_tree* tr)
@@ -27,35 +27,19 @@ void ax__tree_clear(struct ax_tree* tr)
         ax__free_node(node);
     }
     tr->count = 0;
+    ax__region_clear(&tr->rgn);
 }
 
 void ax__free_node(struct ax_node* node)
 {
     switch (node->ty) {
-    case AX_NODE_CONTAINER:
-        if (node->c.line_count != NULL) {
-            free(node->c.line_count);
-        }
-        break;
     case AX_NODE_TEXT:
-        ax__free_node_t_line(node->t.lines);
         ax__destroy_font(node->t.font);
-        free(node->t.text);
         break;
     default:
         break;
     }
 }
-
-void ax__free_node_t_line(struct ax_node_t_line* line)
-{
-    struct ax_node_t_line* next;
-    for (; line != NULL; line = next) {
-        next = line->next;
-        free(line);
-    }
-}
-
 
 int ax__build_node(struct ax_state* s,
                    struct ax_backend* bac,
@@ -74,7 +58,6 @@ int ax__build_node(struct ax_state* s,
 
     case AX_NODE_CONTAINER: {
         node->c.n_lines = 0;
-        node->c.line_count = NULL;
         node->c.main_justify = desc->c.main_justify;
         node->c.cross_justify = desc->c.cross_justify;
         node->c.single_line = desc->c.single_line;
@@ -109,20 +92,14 @@ int ax__build_node(struct ax_state* s,
         break;
 
     case AX_NODE_TEXT: {
-        char* text = malloc(strlen(desc->t.text) + 1);
-        ASSERT(text != NULL, "malloc to copy ax_node_t.desc.text");
-        strcpy(text, desc->t.text);
         struct ax_font* font = NULL;
         int r = ax__new_font(s, bac, desc->t.font_name, &font);
         if (r != 0) {
             return r;
         }
-        node->t = (struct ax_node_t) {
-            .color = desc->t.color,
-            .text = text,
-            .font = font,
-            .lines = NULL,
-        };
+        node->t.color = desc->t.color;
+        node->t.text = ax__strdup(&tr->rgn, desc->t.text);
+        node->t.font = font;
         break;
     }
 

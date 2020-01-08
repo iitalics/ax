@@ -1,6 +1,7 @@
 #pragma once
 #include "ax.h"
 #include "base.h"
+#include "core/region.h"
 
 struct ax_lexer;
 struct ax_interp;
@@ -15,11 +16,12 @@ struct ax_backend_config {
 };
 
 struct ax_state {
-    char* err_msg;
+    struct region init_rgn;
     struct ax_backend_config config;
+    struct region err_msg_rgn;
+    char* err_msg;
     int evt_write_fd;
     int evt_read_fd;
-
     struct ax_backend* backend;
     struct ax_lexer* lexer;
     struct ax_interp* interp;

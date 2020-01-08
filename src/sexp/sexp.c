@@ -16,26 +16,30 @@ enum state {
 
 void ax__init_lexer(struct ax_lexer* lex)
 {
+    ax__init_region(&lex->cur_rgn);
+    ax__init_region(&lex->swap_rgn);
     lex->state = S_NOTHING;
-    lex->len = 0;
-    lex->cap = 32;
     lex->paren_depth = 0;
-    lex->str = malloc(lex->cap);
-    ASSERT(lex->str != NULL, "malloc ax_lexer.str");
-    memset(lex->str, 0xff, lex->cap); // try to prevent silent failure
+    lex->len = 0;
+    lex->str = ALLOCATES(&lex->cur_rgn, char, lex->cap = 32);
 }
 
 void ax__free_lexer(struct ax_lexer* lex)
 {
-    free(lex->str);
+    ax__free_region(&lex->swap_rgn);
+    ax__free_region(&lex->cur_rgn);
 }
 
 static void push_char(struct ax_lexer* lex, char ch)
 {
     if (lex->len + 1 >= lex->cap) {
-        lex->cap *= 2;
-        lex->str = realloc(lex->str, lex->cap);
-        ASSERT(lex->str != NULL, "realloc ax_lexer.str");
+        size_t new_cap = lex->cap * 2;
+        char* new_str = ALLOCATES(&lex->swap_rgn, char, new_cap);
+        memcpy(new_str, lex->str, lex->len);
+        lex->str = new_str;
+        lex->cap = new_cap;
+        ax__swap_regions(&lex->cur_rgn, &lex->swap_rgn);
+        ax__region_clear(&lex->swap_rgn);
     }
     lex->str[lex->len++] = ch;
 }

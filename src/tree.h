@@ -1,6 +1,7 @@
 #pragma once
 #include "base.h"
 #include "utils.h"
+#include "core/region.h"
 
 struct ax_state;
 struct ax_backend;
@@ -50,7 +51,7 @@ struct ax_node_t {
 struct ax_node_t_line {
     struct ax_node_t_line* next;
     struct ax_pos coord;
-    char str[0];
+    char* str;
 };
 
 struct ax_node {
@@ -77,6 +78,7 @@ struct ax_node {
 };
 
 struct ax_tree {
+    struct region rgn;
     size_t count, capacity;
     struct ax_node* nodes;
 };
@@ -90,7 +92,6 @@ void ax__free_tree(struct ax_tree* tr);
 void ax__tree_clear(struct ax_tree* tr);
 
 void ax__free_node(struct ax_node* node);
-void ax__free_node_t_line(struct ax_node_t_line* line);
 
 int ax__build_node(struct ax_state* s,     // used for ax__set_error()
                    struct ax_backend* bac, // used to load fonts

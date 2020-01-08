@@ -16,25 +16,17 @@
 
 struct ax_state* ax_new_state()
 {
-    struct everything {
-        struct ax_state s;
-        struct ax_lexer l;
-        struct ax_interp i;
-        struct ax_tree t;
-        struct ax_geom g;
-        struct ax_async a;
-    };
+    struct region rgn;
+    ax__init_region(&rgn);
 
-    struct everything* e = malloc(sizeof(struct everything));
-    ASSERT(e != NULL, "malloc ax_state");
+    struct ax_state* s = ALLOCATE(&rgn, struct ax_state);
 
-    struct ax_state* s = &e->s;
-
-    s->err_msg = NULL;
     s->config = (struct ax_backend_config) {
-        .win_size = AX_DIM(800, 600),
+        .win_size = AX_DIM(800, 600)
     };
-    s->backend = NULL;
+
+    ax__init_region(&s->err_msg_rgn);
+    s->err_msg = NULL;
 
     int evt_fds[2];
     int rv = pipe(evt_fds);
@@ -42,22 +34,18 @@ struct ax_state* ax_new_state()
     s->evt_read_fd = evt_fds[0];
     s->evt_write_fd = evt_fds[1];
 
-    ax__init_lexer(s->lexer = &e->l);
-    ax__init_interp(s->interp = &e->i);
+    s->backend = NULL;
 
-    ax__init_tree(s->tree = &e->t);
-    /* int r; */
-    /* node_id root; */
-    /* r = ax__build_node(s, NULL, s->tree, &AX_DESC_EMPTY_CONTAINER, &root); */
-    /* ASSERT(r == 0, "build empty tree"); */
-
-    ax__init_geom(s->geom = &e->g);
-
-    ax__init_async(s->async = &e->a,
+    ax__init_lexer(s->lexer = ALLOCATE(&rgn, struct ax_lexer));
+    ax__init_interp(s->interp = ALLOCATE(&rgn, struct ax_interp));
+    ax__init_tree(s->tree = ALLOCATE(&rgn, struct ax_tree));
+    ax__init_geom(s->geom = ALLOCATE(&rgn, struct ax_geom));
+    ax__init_async(s->async = ALLOCATE(&rgn, struct ax_async),
                    s->geom,
                    s->tree,
                    s->evt_write_fd);
 
+    s->init_rgn = rgn;
     return s;
 }
 
@@ -75,8 +63,10 @@ void ax_destroy_state(struct ax_state* s)
         ax__free_interp(s->interp);
         ax__free_lexer(s->lexer);
         ax__destroy_backend(s->backend);
-        free(s->err_msg);
-        free(s);
+        ax__free_region(&s->err_msg_rgn);
+
+        struct region init_rgn = s->init_rgn;
+        ax__free_region(&init_rgn);
     }
 }
 
@@ -92,10 +82,8 @@ void ax__initialize_backend(struct ax_state* s)
 
 void ax__set_error(struct ax_state* s, const char* err)
 {
-    free(s->err_msg);
-    s->err_msg = malloc(strlen(err) + 1);
-    ASSERT(s->err_msg != NULL, "malloc ax_state.err_msg");
-    strcpy(s->err_msg, err);
+    ax__region_clear(&s->err_msg_rgn);
+    s->err_msg = ax__strdup(&s->err_msg_rgn, err);
 }
 
 int ax_poll_event_fd(struct ax_state* s)
@@ -138,6 +126,7 @@ const char* ax_get_error(struct ax_state* s)
 
 void ax_write_start(struct ax_state* s)
 {
+    // TODO: find better way to reset an interp
     ax__free_interp(s->interp);
     ax__init_interp(s->interp);
     ax__lexer_eof(s->lexer);
