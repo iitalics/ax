@@ -153,6 +153,11 @@ int ax_write_chunk(struct ax_state* s, const char* input, size_t len)
     return 0;
 }
 
+int ax_write_string(struct ax_state* s, const char* input)
+{
+    return ax_write_chunk(s, input, strlen(input));
+}
+
 int ax_write_end(struct ax_state* s)
 {
     return write_token(s, ax__lexer_eof(s->lexer));
@@ -162,7 +167,7 @@ int ax_write(struct ax_state* s, const char* input)
 {
     ax_write_start(s);
     int r;
-    if ((r = ax_write_chunk(s, input, strlen(input))) != 0) {
+    if ((r = ax_write_string(s, input)) != 0) {
         return r;
     }
     return ax_write_end(s);

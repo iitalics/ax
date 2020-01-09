@@ -90,14 +90,12 @@ TEST(build_big_tree)
 {
     struct ax_state* s = ax_new_state();
     ax_write_start(s);
-#define W(x) ax_write_chunk(s, x, strlen(x))
-    W("(init (window-size 200 200))");
-    W("(set-root (container (children");
+    ax_write_string(s, "(init (window-size 200 200))");
+    ax_write_string(s, "(set-root (container (children");
     for (int i = 0; i < 1000; i++) {
-        W("(rect (size 20 20))");
+        ax_write_string(s, "(rect (size 20 20))");
     }
-    W(")))");
-#undef W
+    ax_write_string(s, ")))");
     CHECK_IEQ(ax_write_end(s), 0);
     CHECK_SZEQ(ax__tree_count(s->tree), (size_t) 1001);
     ax_destroy_state(s);

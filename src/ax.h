@@ -33,5 +33,6 @@ void ax_read_close_event(struct ax_state* s);
 
 void ax_write_start(struct ax_state* s);
 int ax_write_chunk(struct ax_state* s, const char* input, size_t len);
+int ax_write_string(struct ax_state* s, const char* input);
 int ax_write_end(struct ax_state* s);
 int ax_write(struct ax_state* s, const char* input);
