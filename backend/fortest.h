@@ -9,7 +9,8 @@ struct ax_backend {
 
     pthread_mutex_t sig_mx;
     struct {
-        bool close;
+        int v;
+        struct ax_dim size;
     } sig;
 
     pthread_cond_t sync;
@@ -18,5 +19,8 @@ struct ax_backend {
     struct region font_rgn;
 };
 
+void ax_test_backend_sync(struct ax_backend* bac);
 void ax_test_backend_sync_until(struct ax_backend* bac, size_t desired_len);
+
 void ax_test_backend_sig_close(struct ax_backend* bac);
+void ax_test_backend_sig_resize(struct ax_backend* bac, struct ax_dim size);

@@ -8,6 +8,11 @@
 #include "../src/utils.h"
 #include "../src/geom/text.h"
 
+enum {
+    SIG_MASK_CLOSE  = 1 << 0,
+    SIG_MASK_RESIZE = 1 << 1,
+};
+
 struct ax_font {
     ax_length size;
 };
@@ -18,7 +23,7 @@ int ax__new_backend(struct ax_state* s, struct ax_backend** out_bac)
     bac->ds = NULL;
     bac->ds_len = 0;
     pthread_mutex_init(&bac->sig_mx, NULL);
-    bac->sig.close = false;
+    bac->sig.v = 0;
     pthread_cond_init(&bac->sync, NULL);
     pthread_mutex_init(&bac->sync_mx, NULL);
     ax__init_region(&bac->font_rgn);
@@ -41,12 +46,27 @@ bool ax__poll_event(struct ax_backend* bac, struct ax_backend_evt* out_evt)
 {
     pthread_mutex_lock(&bac->sig_mx);
 
-    struct ax_backend_evt e = { .ty = AX_BEVT__MAX };
-    if (bac->sig.close) {
-        e.ty = AX_BEVT_CLOSE;
-    }
+#define HANDLE_MASK(_m, _body) do {             \
+        if (bac->sig.v & (_m)) {                \
+            bac->sig.v &= ~(_m);                \
+            _body;                              \
+            goto done;                          \
+        } } while (0)
 
-    bac->sig.close = false;
+    struct ax_backend_evt e = { .ty = AX_BEVT__MAX };
+
+    HANDLE_MASK(SIG_MASK_CLOSE, {
+            e.ty = AX_BEVT_CLOSE;
+        });
+
+    HANDLE_MASK(SIG_MASK_RESIZE, {
+            e.ty = AX_BEVT_RESIZE;
+            e.resize_dim = bac->sig.size;
+        });
+
+#undef HANDLE_MASK
+
+done:
     pthread_mutex_unlock(&bac->sig_mx);
 
     if (e.ty < AX_BEVT__MAX) {
@@ -66,7 +86,15 @@ void ax__wait_for_frame(struct ax_backend* bac)
 void ax_test_backend_sig_close(struct ax_backend* bac)
 {
     pthread_mutex_lock(&bac->sig_mx);
-    bac->sig.close = true;
+    bac->sig.v |= SIG_MASK_CLOSE;
+    pthread_mutex_unlock(&bac->sig_mx);
+}
+
+void ax_test_backend_sig_resize(struct ax_backend* bac, struct ax_dim size)
+{
+    pthread_mutex_lock(&bac->sig_mx);
+    bac->sig.v |= SIG_MASK_RESIZE;
+    bac->sig.size = size;
     pthread_mutex_unlock(&bac->sig_mx);
 }
 
@@ -78,6 +106,13 @@ void ax__render(struct ax_backend* bac,
     bac->ds = draws;
     bac->ds_len = len;
     pthread_cond_broadcast(&bac->sync);
+    pthread_mutex_unlock(&bac->sync_mx);
+}
+
+void ax_test_backend_sync(struct ax_backend* bac)
+{
+    pthread_mutex_lock(&bac->sync_mx);
+    pthread_cond_wait(&bac->sync, &bac->sync_mx);
     pthread_mutex_unlock(&bac->sync_mx);
 }
 
