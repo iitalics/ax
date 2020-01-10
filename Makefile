@@ -40,8 +40,7 @@ t: ax_test
 b: logfile := $(shell date '+_bench/log_%m%d_%H%M%S%N.txt')
 b: ax_bench
 	@mkdir -p _bench
-	@echo BENCH - Logging stdout to "${logfile}"
-	LD_LIBRARY_PATH=_build/lib ./$< ${args} > ${logfile} &
+	@. ./benchmark.sh ${args}
 
 cb:
 	rm -rf _bench
