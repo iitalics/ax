@@ -1,5 +1,6 @@
-ax_*test
+ax_*
 _build
+_bench
 .dir-locals.el
 TAGS
 *_scrot.png

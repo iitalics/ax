@@ -19,7 +19,7 @@ test_gen	= _build/run_tests.inc
 objs		= $(shell ${find_srcs} | ${sed_src2obj})
 
 libs		= _build/lib/libaxl_SDL.so _build/lib/libaxl_fortest.so
-test_exes	= ax_test ax_sdl_test
+exes		= ax_test ax_bench ax_sdl_test
 
 find_srcs	= find src -type f -name '*.c'
 sed_src2obj	= sed -e 's/src\/\(.*\)\//_build\/src__\1__/;s/$$/.o/'
@@ -29,13 +29,22 @@ sed_obj2dep	= sed -e 's/\.c\.o$$/.dep/'
 
 # make commands
 
-all: ${libs} ${test_exes}
+all: ${libs} ${exes}
 
 c:
-	rm -rf _build ${test_exes}
+	rm -rf _build ${exes}
 
 t: ax_test
-	LD_LIBRARY_PATH=_build/lib ./$< ${test_args}
+	LD_LIBRARY_PATH=_build/lib ./$< ${args}
+
+b: logfile := $(shell date '+_bench/log_%m%d_%H%M%S%N.txt')
+b: ax_bench
+	@mkdir -p _bench
+	@echo BENCH - Logging stdout to "${logfile}"
+	LD_LIBRARY_PATH=_build/lib ./$< ${args} > ${logfile} &
+
+cb:
+	rm -rf _bench
 
 sdl_t: ax_sdl_test
 	LD_LIBRARY_PATH=_build/lib ./$<
@@ -48,7 +57,12 @@ sdl_t: ax_sdl_test
 ax_test: test/main.c ${test_gen} ${test_srcs} _build/lib/libaxl_fortest.so
 	@echo "CC $<"
 	@${cc} -L_build/lib -laxl_fortest \
-		${cc_flags} ${test_srcs} test/main.c -o $@
+		${cc_flags} $< ${test_srcs} -o $@
+
+ax_bench: bench/main.c _build/lib/libaxl_fortest.so
+	@echo "CC $<"
+	@${cc} -L_build/lib -laxl_fortest \
+		${cc_flags} $< -o $@
 
 ax_sdl_test: test/ui_main.c _build/lib/libaxl_SDL.so
 	@echo "CC $< (sdl)"
